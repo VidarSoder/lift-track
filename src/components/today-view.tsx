@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
+import { isOpenSession } from "@/lib/active-session";
 import { sessionSetCounts } from "@/lib/session";
 import { lastDone, suggestWorkout, workoutCatalog } from "@/lib/suggest";
+import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -14,7 +16,7 @@ export function TodayView() {
   const today = formatDateISO();
   const suggestion = suggestWorkout(athlete);
   const counts = todaySession ? sessionSetCounts(todaySession) : null;
-  const open = todaySession && todaySession.status !== "completed";
+  const open = isOpenSession(todaySession, today);
 
   return (
     <div className="space-y-5">
@@ -31,7 +33,7 @@ export function TodayView() {
         <Card className="border-primary/20 bg-primary/8">
           <CardContent className="space-y-3 pt-5">
             <p className="text-sm text-muted-foreground">In progress</p>
-            <p className="font-medium">{todaySession.title}</p>
+            <p className="font-medium">{todaySession?.title}</p>
             {counts ? (
               <p className="text-sm text-muted-foreground">
                 {counts.completedSets} sets logged. Save whenever — you do not
@@ -84,23 +86,35 @@ export function TodayView() {
       </Link>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Or pick another</p>
+        <p className="text-sm font-medium">
+          {open ? "Preview another workout" : "Or pick another"}
+        </p>
         {workoutCatalog().map((workout) => {
           const last = lastDone(athlete, workout.id);
           const recommended = workout.id === suggestion.workout.id && !open;
+          const current = open && todaySession?.dayId === workout.id;
           return (
             <Link
               key={workout.id}
-              href={`/workout?pick=${workout.id}`}
+              href={current ? "/workout" : `/workout?pick=${workout.id}`}
               className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3"
             >
-              <div>
-                <p className="font-medium leading-tight">{workout.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {last ? `Last ${last}` : "Not logged yet"} · {workout.durationMin} min
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ExerciseMark id={workout.id} />
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight">{workout.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {current
+                      ? "Open session"
+                      : last
+                        ? `Last ${last}`
+                        : "Not logged yet"}{" "}
+                    · {workout.durationMin} min
+                  </p>
+                </div>
               </div>
               {recommended ? <Badge>Suggested</Badge> : null}
+              {current ? <Badge variant="secondary">Now</Badge> : null}
             </Link>
           );
         })}

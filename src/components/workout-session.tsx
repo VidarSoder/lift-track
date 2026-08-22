@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { FEEL_GUIDE, dayById } from "@/data/program";
+import { isOpenSession } from "@/lib/active-session";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
 import { workoutCatalog } from "@/lib/suggest";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/lib/session";
 import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
 import { ExerciseHowButton, WorkoutExercisePreview } from "@/components/exercise-guide";
+import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
 import { Badge } from "@/components/ui/badge";
@@ -136,10 +138,18 @@ export function WorkoutSessionView() {
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
 
-  const session = todaySession && todaySession.date === today ? todaySession : undefined;
+  const session = isOpenSession(todaySession, today)
+    ? todaySession
+    : todaySession && todaySession.date === today
+      ? todaySession
+      : undefined;
   const picked = pick ? dayById(pick) : undefined;
-  const day = session ? dayById(session.dayId) ?? picked : picked;
-  const counts = session ? sessionSetCounts(session) : null;
+  const viewingSession =
+    Boolean(session) && (!picked || picked.id === session?.dayId);
+  const day = viewingSession
+    ? dayById(session?.dayId ?? "") ?? picked
+    : picked;
+  const counts = session && viewingSession ? sessionSetCounts(session) : null;
 
   function startWorkout(id: string) {
     const nextDay = dayById(id);
@@ -160,14 +170,18 @@ export function WorkoutSessionView() {
     persistSession({ ...next, updatedAt: new Date().toISOString() });
   }
 
-  if (!session) {
+  if (!viewingSession) {
     if (day) {
+      const locked = isOpenSession(session, today);
       return (
         <div className="space-y-5">
           <header>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-              {day.exercises.length} lifts
-            </p>
+            <div className="flex items-center gap-3">
+              <ExerciseMark id={day.id} />
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                {day.exercises.length} lifts · preview
+              </p>
+            </div>
             <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
           </header>
@@ -176,10 +190,17 @@ export function WorkoutSessionView() {
             and finish stills, and the form video.
           </p>
           <WorkoutExercisePreview exercises={day.exercises} />
-          <div className="sticky bottom-24 z-10">
-            <Button size="lg" className="h-12 w-full text-base shadow-lg" onClick={() => startWorkout(day.id)}>
-              Start this workout
-            </Button>
+          <div className="sticky bottom-24 z-10 space-y-2">
+            {locked ? (
+              <p className="rounded-xl bg-secondary/80 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
+                Preview only. Your current session stays open — use the floating
+                button to go back.
+              </p>
+            ) : (
+              <Button size="lg" className="h-12 w-full text-base shadow-lg" onClick={() => startWorkout(day.id)}>
+                Start this workout
+              </Button>
+            )}
           </div>
         </div>
       );
@@ -189,26 +210,29 @@ export function WorkoutSessionView() {
         <header>
           <h1 className="font-heading text-3xl leading-none">Pick a workout</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Log what you do. You can save before the list is finished.
+            Preview first. You can leave and come back after you start.
           </p>
         </header>
         {workoutCatalog().map((workout) => (
           <Link
             key={workout.id}
             href={`/workout?pick=${workout.id}`}
-            className="block w-full rounded-2xl border border-border bg-card px-4 py-3 text-left"
+            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left"
           >
-            <p className="font-medium">{workout.title}</p>
-            <p className="text-xs text-muted-foreground">
-              {workout.exercises.length} lifts · {workout.durationMin} min · preview first
-            </p>
+            <ExerciseMark id={workout.id} />
+            <div>
+              <p className="font-medium">{workout.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {workout.exercises.length} lifts · {workout.durationMin} min
+              </p>
+            </div>
           </Link>
         ))}
       </div>
     );
   }
 
-  if (!day) return null;
+  if (!session || !day) return null;
 
   return (
     <div className="space-y-5">
@@ -224,6 +248,9 @@ export function WorkoutSessionView() {
           ) : null}
         </div>
         <h1 className="font-heading text-3xl leading-none">{day.title}</h1>
+        <Link href="/week" className="inline-block text-sm text-muted-foreground underline">
+          Browse other lifts
+        </Link>
       </header>
 
       <Card>
@@ -313,7 +340,9 @@ export function WorkoutSessionView() {
           <Card key={exercise.id}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex min-w-0 items-start gap-3">
+                  <ExerciseMark id={exercise.id} />
+                  <div>
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {exerciseIndex + 1} · {exercise.group}
                     {exercise.supersetWith ? " · pair" : ""}
@@ -326,6 +355,7 @@ export function WorkoutSessionView() {
                     {exercise.tempo ? ` · tempo ${exercise.tempo}` : ""}
                     {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
                   </p>
+                  </div>
                 </div>
                 <ExerciseHowButton exercise={exercise} label="How" />
               </div>

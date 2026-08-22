@@ -2,7 +2,7 @@
 
 Phone-first training log for Vidar. Today’s session, set-by-set weights, previous loads, how you felt, and progress.
 
-**Form** is the preview book: every lift has a looping start–finish GIF, still photos, a video you can play in-app or open in YouTube, and the setup/rep cues. Open it before you start. Tapping a card never starts a workout.
+**Form** is the preview book: every lift has its own quiet icon and color, a looping start–finish GIF, still photos, a video you can play in-app or open in YouTube, and the setup/rep cues. Open it before you start, or during a session. A floating button brings you back to the open workout. Tapping a card never starts a workout.
 
 Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
 

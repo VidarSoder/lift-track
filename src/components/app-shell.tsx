@@ -1,8 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, Images, TrendingUp } from "lucide-react";
+import { ActiveSessionFab } from "@/components/active-session-fab";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -17,7 +19,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
-      <main className="flex-1 px-4 pb-28 pt-6">{children}</main>
+      <main className="flex-1 px-4 pb-36 pt-6">{children}</main>
+      <Suspense fallback={null}>
+        <ActiveSessionFab />
+      </Suspense>
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-border/80 bg-background/90 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md">
         <ul className="grid grid-cols-4 gap-1">
           {LINKS.map((link) => {

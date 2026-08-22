@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ExerciseMark, markEdge } from "@/components/exercise-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -128,11 +129,16 @@ export function ExerciseGuide({
     >
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader className="pr-8">
-          <DialogTitle className="text-lg">{exercise.name}</DialogTitle>
-          <DialogDescription>
-            {exercise.group} · {exercise.sets} × {exercise.reps}
-            {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
-          </DialogDescription>
+          <div className="flex items-start gap-3">
+            <ExerciseMark id={exercise.id} />
+            <div>
+              <DialogTitle className="text-lg">{exercise.name}</DialogTitle>
+              <DialogDescription>
+                {exercise.group} · {exercise.sets} × {exercise.reps}
+                {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {media ? (
@@ -253,14 +259,52 @@ export function ExercisePreviewCard({
   const [open, setOpen] = useState(false);
   const media = mediaFor(exercise.id);
 
+  if (compact) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-2xl border border-border border-l-2 bg-card px-3 py-2.5 text-left",
+            markEdge(exercise.id),
+          )}
+        >
+          <ExerciseMark id={exercise.id} size="sm" />
+          <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-black">
+            {media ? (
+              <FormLoop
+                slug={media.slug}
+                youtube={media.youtube}
+                alt={exercise.name}
+                fit="cover"
+              />
+            ) : null}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium leading-tight">{exercise.name}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {exercise.group} · {exercise.sets} × {exercise.reps}
+            </p>
+          </div>
+          <Play className="size-3.5 shrink-0 text-muted-foreground" />
+        </button>
+        <ExerciseGuide exercise={exercise} open={open} onOpenChange={setOpen} />
+      </>
+    );
+  }
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full overflow-hidden rounded-2xl border border-border bg-card text-left"
+        className={cn(
+          "w-full overflow-hidden rounded-2xl border border-border border-l-2 bg-card text-left",
+          markEdge(exercise.id),
+        )}
       >
-        <div className={cn("relative bg-black", compact ? "aspect-[16/9]" : "aspect-[4/3]")}>
+        <div className="relative aspect-[4/3] bg-black">
           {media ? (
             <FormLoop
               slug={media.slug}
@@ -268,10 +312,10 @@ export function ExercisePreviewCard({
               alt={exercise.name}
             />
           ) : null}
-          <span className="absolute top-3 left-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white">
-            GIF
+          <span className="absolute top-3 left-3">
+            <ExerciseMark id={exercise.id} />
           </span>
-          <span className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-black">
+          <span className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-black">
             <Play className="size-3 fill-black" />
             Video + how
           </span>

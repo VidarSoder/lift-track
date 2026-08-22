@@ -3,8 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { exercisesByMuscle } from "@/data/program";
+import { formatDateISO } from "@/lib/dates";
+import { isOpenSession } from "@/lib/active-session";
 import { workoutCatalog } from "@/lib/suggest";
 import { ExercisePreviewCard } from "@/components/exercise-guide";
+import { ExerciseMark } from "@/components/exercise-mark";
+import { useTraining } from "@/components/training-provider";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,10 +16,14 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | string;
 
 export function WeekView() {
+  const { todaySession } = useTraining();
   const workouts = workoutCatalog();
   const [filter, setFilter] = useState<Filter>("all");
   const groups = useMemo(() => exercisesByMuscle(), []);
   const selected = workouts.find((workout) => workout.id === filter);
+  const active = isOpenSession(todaySession, formatDateISO())
+    ? todaySession
+    : undefined;
 
   return (
     <div className="space-y-5">
@@ -25,8 +33,8 @@ export function WeekView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Every lift</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Tap a card for a video, start and finish photos, a looping GIF, and
-          how to do the rep. Nothing starts until you say so.
+          Scan the list, tap a card for video and photos. You can do this before
+          you start, and again in the middle of a session.
         </p>
       </header>
 
@@ -41,6 +49,7 @@ export function WeekView() {
             key={workout.id}
             active={filter === workout.id}
             onClick={() => setFilter(workout.id)}
+            id={workout.id}
             label={workout.title.split("·")[0].trim()}
           />
         ))}
@@ -49,24 +58,44 @@ export function WeekView() {
       {selected ? (
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-medium">{selected.title}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {selected.exercises.length} lifts · {selected.durationMin} min
-              </p>
+            <div className="flex items-start gap-3">
+              <ExerciseMark id={selected.id} />
+              <div>
+                <p className="font-medium">{selected.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {selected.exercises.length} lifts · {selected.durationMin} min
+                </p>
+              </div>
             </div>
             <Badge variant="secondary">Preview</Badge>
           </div>
           <p className="text-sm leading-6 text-muted-foreground">{selected.focus}</p>
-          <Link
-            href={`/workout?pick=${selected.id}`}
-            className={buttonVariants({
-              size: "lg",
-              className: "h-11 w-full",
-            })}
-          >
-            Start this workout
-          </Link>
+          {active && active.dayId === selected.id ? (
+            <Link
+              href="/workout"
+              className={buttonVariants({
+                size: "lg",
+                className: "h-11 w-full",
+              })}
+            >
+              Back to this session
+            </Link>
+          ) : active ? (
+            <p className="rounded-xl bg-secondary/70 px-3 py-2 text-xs leading-5 text-muted-foreground">
+              Preview only. Your session stays open — use the button at the
+              bottom to return.
+            </p>
+          ) : (
+            <Link
+              href={`/workout?pick=${selected.id}`}
+              className={buttonVariants({
+                size: "lg",
+                className: "h-11 w-full",
+              })}
+            >
+              Preview, then start
+            </Link>
+          )}
           {selected.exercises.map((exercise) => (
             <ExercisePreviewCard key={exercise.id} exercise={exercise} />
           ))}
@@ -74,12 +103,16 @@ export function WeekView() {
       ) : (
         <div className="space-y-6">
           {groups.map((group) => (
-            <section key={group.group} className="space-y-3">
+            <section key={group.group} className="space-y-2">
               <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {group.group}
               </h2>
               {group.exercises.map((exercise) => (
-                <ExercisePreviewCard key={exercise.id} exercise={exercise} />
+                <ExercisePreviewCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  compact
+                />
               ))}
             </section>
           ))}
@@ -93,22 +126,25 @@ function FilterChip({
   active,
   label,
   onClick,
+  id,
 }: {
   active: boolean;
   label: string;
   onClick: () => void;
+  id?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
         active
           ? "bg-primary text-primary-foreground"
           : "bg-secondary text-secondary-foreground",
       )}
     >
+      {id ? <ExerciseMark id={id} size="sm" className={active ? "bg-black/15" : undefined} /> : null}
       {label}
     </button>
   );
