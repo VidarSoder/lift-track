@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAthleteId(id) {
+      return id.size() == 64 && id.matches('^[a-f0-9]+$');
+    }
+
+    function isValidAthlete(data) {
+      return data.keys().hasAll([
+          'name',
+          'timezone',
+          'programStartDate',
+          'lastByDay',
+          'prs',
+          'recent',
+          'sessionsCompleted',
+          'streak',
+          'updatedAt'
+        ])
+        && data.name is string
+        && data.timezone is string
+        && data.programStartDate is string
+        && data.sessionsCompleted is int
+        && data.streak is int
+        && data.updatedAt is string
+        && data.recent is list
+        && data.recent.size() <= 12;
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll([
+          'date',
+          'dayId',
+          'title',
+          'status',
+          'startedAt',
+          'timeOfDay',
+          'feelingBefore',
+          'exercises',
+          'updatedAt'
+        ])
+        && data.date is string
+        && data.dayId is string
+        && data.title is string
+        && data.status in ['in_progress', 'completed', 'skipped']
+        && data.exercises is list;
+    }
+
+    match /athletes/{athleteId} {
+      allow read: if isAthleteId(athleteId);
+      allow create, update: if isAthleteId(athleteId) && isValidAthlete(request.resource.data);
+      allow delete: if false;
+
+      match /sessions/{sessionId} {
+        allow read: if isAthleteId(athleteId);
+        allow create, update: if isAthleteId(athleteId)
+          && sessionId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && isValidSession(request.resource.data);
+        allow delete: if false;
+      }
+    }
+  }
+}
