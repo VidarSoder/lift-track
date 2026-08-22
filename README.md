@@ -35,7 +35,7 @@ Change the passphrase with `NEXT_PUBLIC_ACCESS_PASSPHRASE` and bookmark `/go/<th
 
 ## Firebase
 
-The app writes to Firestore only when the `NEXT_PUBLIC_FIREBASE_*` keys are set. Until then everything is saved on the phone.
+Live project: **vidar-training** (Europe `eur3`). The web app is already registered and the client config is baked into `src/lib/firebase.ts`.
 
 Document layout (few reads on purpose):
 
@@ -44,14 +44,10 @@ Document layout (few reads on purpose):
 
 On open: **one** athlete read. Today’s session is read only if that document says a session is already open today. No collection scans, no live listeners. Writes are debounced.
 
+Console: https://console.firebase.google.com/project/vidar-training/overview
+
 Deploy rules from this repo:
 
 ```bash
-npx -y firebase-tools@latest deploy --only firestore:rules
+npx -y firebase-tools@latest deploy --only firestore
 ```
-
-I've set up prototype Security Rules to keep the data in Firestore safe. They are designed to be secure for a single private passphrase vault (document IDs are 64-char SHA-256 hex, session IDs must be dates, athlete/session payloads are type-checked, deletes are denied). However, you should review and verify them before broadly sharing your app. If you'd like, I can help you harden these rules.
-
-## Firebase login (this machine)
-
-Firebase MCP was not signed in when the app was built. If you want the agent to attach your existing project, visit the Firebase login URL it sent, confirm the session ID, and paste the auth code.

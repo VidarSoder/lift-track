@@ -1,4 +1,32 @@
 rules_version = '2';
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+// Collection: athletes
+// Document ID: 64-char sha256 hex of (passphrase + salt)
+// Fields:
+//   - name: string
+//   - timezone: string
+//   - programStartDate: string YYYY-MM-DD
+//   - lastSessionDate: string | null
+//   - lastSessionStatus: string | null
+//   - lastByDay: map
+//   - prs: map
+//   - recent: list <= 12
+//   - sessionsCompleted: int
+//   - streak: int
+//   - updatedAt: string
+//
+// Collection: athletes/{id}/sessions
+// Document ID: YYYY-MM-DD
+// Fields:
+//   - date, dayId, title, status, startedAt, timeOfDay
+//   - feelingBefore: map
+//   - feelingAfter: map (optional)
+//   - exercises: list
+//   - updatedAt: string
+// Access is passphrase-path based: no Firebase Auth.
+// ===============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAthleteId(id) {
