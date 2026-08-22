@@ -122,13 +122,23 @@
     @apply border-border outline-ring/50;
   }
   html {
-    @apply font-sans h-full overflow-hidden overscroll-none;
+    @apply font-sans overflow-hidden overscroll-none;
     height: 100%;
-    height: -webkit-fill-available;
+    height: 100lvh;
+    background: var(--background);
   }
   body {
     @apply overflow-hidden overscroll-none bg-background text-foreground;
     min-height: 100%;
-    min-height: -webkit-fill-available;
+    min-height: 100lvh;
   }
+}
+
+.app-shell {
+  position: fixed;
+  inset: 0;
+}
+
+.app-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
