@@ -40,4 +40,6 @@ Open [http://127.0.0.1:43173](http://127.0.0.1:43173).
 
 ## Vercel
 
-Project: `training` under your Vercel account. Production env holds the same server secrets. Do not add `NEXT_PUBLIC_` copies of the passphrase or Admin key.
+Live site: https://training-eight-fawn.vercel.app
+
+Project: `training` under vidarsoders-projects. Production and Preview hold `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` as Sensitive secrets. Do not add `NEXT_PUBLIC_` copies of those values.

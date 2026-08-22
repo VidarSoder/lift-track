@@ -8,13 +8,15 @@ function serviceAccount(): ServiceAccount {
   if (inline) {
     return JSON.parse(inline) as ServiceAccount;
   }
-  const filePath =
-    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-    resolve(process.cwd(), ".secrets/firebase-admin.json");
-  if (!existsSync(filePath)) {
-    throw new Error("Firebase Admin credentials are not configured");
+
+  const filePath = resolve(process.cwd(), ".secrets/firebase-admin.json");
+  if (existsSync(/*turbopackIgnore: true*/ filePath)) {
+    return JSON.parse(
+      readFileSync(/*turbopackIgnore: true*/ filePath, "utf8"),
+    ) as ServiceAccount;
   }
-  return JSON.parse(readFileSync(filePath, "utf8")) as ServiceAccount;
+
+  throw new Error("Firebase Admin credentials are not configured");
 }
 
 export function adminDb() {
