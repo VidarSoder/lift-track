@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dumbbell, Home, Images, TrendingUp } from "lucide-react";
+import { Dumbbell, Home, Images, Settings, TrendingUp } from "lucide-react";
 import { ActiveSessionFab } from "@/components/active-session-fab";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/week", label: "Form", icon: Images },
   { href: "/workout", label: "Lift", icon: Dumbbell },
   { href: "/progress", label: "Progress", icon: TrendingUp },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -26,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ActiveSessionFab />
       </Suspense>
       <nav className="shrink-0 border-t border-border/80 bg-background px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
-        <ul className="grid grid-cols-4 gap-1">
+        <ul className="grid grid-cols-5 gap-1">
           {LINKS.map((link) => {
             const active =
               link.href === "/"

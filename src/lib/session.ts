@@ -54,6 +54,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     lastSessionStatus: null,
     lastByDay: {},
     lastLoads: {},
+    bodyWeight: [],
     prs: {},
     recent: [],
     sessionsCompleted: 0,

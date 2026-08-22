@@ -20,7 +20,7 @@ type TrainingContextValue = {
   athlete: AthleteDoc;
   todaySession: WorkoutSession | undefined;
   unlock: (passphrase: string) => Promise<boolean>;
-  setAthlete: (athlete: AthleteDoc) => void;
+  setAthlete: (athlete: AthleteDoc, options?: { immediate?: boolean }) => void;
   setTodaySession: (session: WorkoutSession | undefined) => void;
   persistSession: (session: WorkoutSession, options?: { immediate?: boolean }) => void;
   saveSessionProgress: (session: WorkoutSession) => void;
@@ -110,9 +110,11 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const setAthlete = useCallback(
-    (next: AthleteDoc) => {
+    (next: AthleteDoc, options?: { immediate?: boolean }) => {
       setAthleteState(next);
-      queueSave({ athlete: next, today: todaySession });
+      const bundle = { athlete: next, today: todaySession };
+      if (options?.immediate) void saveNow(bundle);
+      else queueSave(bundle);
     },
     [todaySession],
   );

@@ -17,7 +17,9 @@ function isAthlete(value: unknown): value is AthleteDoc {
     typeof data.streak === "number" &&
     typeof data.updatedAt === "string" &&
     Array.isArray(data.recent) &&
-    data.recent.length <= 12
+    data.recent.length <= 12 &&
+    (data.bodyWeight == null ||
+      (Array.isArray(data.bodyWeight) && data.bodyWeight.length <= 80))
   );
 }
 

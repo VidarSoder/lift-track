@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { DAYS } from "@/data/program";
+import { latestWeight, weightDelta } from "@/lib/weight";
 import { useTraining } from "@/components/training-provider";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 function Bar({ value, max }: { value: number; max: number }) {
   const width = max === 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
@@ -18,8 +17,9 @@ function Bar({ value, max }: { value: number; max: number }) {
 }
 
 export function ProgressView() {
-  const { athlete, setAthlete } = useTraining();
-  const [start, setStart] = useState(athlete.programStartDate);
+  const { athlete } = useTraining();
+  const body = latestWeight(athlete);
+  const delta = weightDelta(athlete);
   const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
@@ -64,6 +64,34 @@ export function ProgressView() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardContent className="space-y-2 pt-5">
+          <p className="text-xs text-muted-foreground">Body weight</p>
+          <p className="text-2xl font-semibold">
+            {body ? `${body.kg.toFixed(1)} kg` : "Not logged"}
+          </p>
+          {delta ? (
+            <p className="text-sm text-muted-foreground">
+              {delta.kg > 0 ? "+" : ""}
+              {delta.kg} kg since the first weigh-in
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Add weigh-ins in Settings to see the trend.
+            </p>
+          )}
+          <Link
+            href="/settings"
+            className={buttonVariants({
+              variant: "secondary",
+              className: "w-full",
+            })}
+          >
+            Open settings
+          </Link>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">
@@ -140,35 +168,6 @@ export function ProgressView() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Program start</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Label htmlFor="start">Week 1, day 1</Label>
-          <Input
-            id="start"
-            type="date"
-            value={start}
-            onChange={(event) => setStart(event.target.value)}
-            className="h-11"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() =>
-              setAthlete({
-                ...athlete,
-                programStartDate: start,
-                updatedAt: new Date().toISOString(),
-              })
-            }
-          >
-            Save start date
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }
