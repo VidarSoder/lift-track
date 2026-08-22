@@ -1,15 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
-import { FEEL_GUIDE, dayById, dayByWeekday } from "@/data/program";
-import {
-  currentTimeOfDay,
-  formatDateISO,
-  suggestedWindow,
-  timeOfDayLabel,
-  weekdayOf,
-} from "@/lib/dates";
+import { FEEL_GUIDE, dayById } from "@/data/program";
+import { formatDateISO, suggestedWindow } from "@/lib/dates";
+import { workoutCatalog } from "@/lib/suggest";
 import {
   createSession,
   emptyAfter,
@@ -137,33 +133,20 @@ export function WorkoutSessionView() {
   const { athlete, todaySession, persistSession, completeSession } =
     useTraining();
   const today = formatDateISO();
-  const scheduled = dayByWeekday(weekdayOf());
+  const pick = useSearchParams().get("pick");
   const [openHow, setOpenHow] = useState<string | null>(null);
 
   const session = todaySession && todaySession.date === today ? todaySession : undefined;
-  const day = session ? dayById(session.dayId) ?? scheduled : scheduled;
+  const picked = pick ? dayById(pick) : undefined;
+  const day = session ? dayById(session.dayId) ?? picked : picked;
   const counts = session ? sessionSetCounts(session) : null;
-  const showAfter =
-    session?.status === "completed" ||
-    (counts !== null && counts.completedSets >= Math.max(1, counts.plannedSets - 1));
 
-  const started = useMemo(() => {
-    if (!athlete.programStartDate) return;
-    return athlete.programStartDate;
-  }, [athlete.programStartDate]);
-
-  function startDay() {
-    if (day.exercises.length === 0) {
-      const rest = createSession(day, today);
-      rest.status = "completed";
-      rest.finishedAt = new Date().toISOString();
-      rest.feelingAfter = emptyAfter();
-      completeSession(rest);
-      return;
-    }
-    const next = createSession(day, today);
+  function startWorkout(id: string) {
+    const nextDay = dayById(id);
+    if (!nextDay) return;
+    const next = createSession(nextDay, today);
     for (const exercise of next.exercises) {
-      const prev = previousSets(athlete, day.id, exercise.exerciseId);
+      const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
       exercise.sets = exercise.sets.map((set, index) => ({
         ...set,
         weight: prev[index]?.weight ?? null,
@@ -178,32 +161,48 @@ export function WorkoutSessionView() {
   }
 
   if (!session) {
-    return (
-      <div className="space-y-5">
-        <header>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-            {day.source}
-          </p>
-          <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.coaching}</p>
-        </header>
-        <Card>
-          <CardContent className="space-y-3 pt-5 text-sm leading-6 text-muted-foreground">
-            <p className="text-foreground">
-              {timeOfDayLabel(currentTimeOfDay())} · {suggestedWindow(currentTimeOfDay())}
+    if (day) {
+      return (
+        <div className="space-y-5">
+          <header>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+              {day.exercises.length} lifts
             </p>
-            <p>{day.exercises.length} exercises · {day.durationMin} min</p>
-            {started ? (
-              <p className="text-xs">Program start date {started}. Change it on Progress if needed.</p>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Button size="lg" className="h-12 w-full text-base" onClick={startDay}>
-          {day.id === "rest" ? "Mark rest day" : "Start this workout"}
-        </Button>
+            <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
+          </header>
+          <Button size="lg" className="h-12 w-full text-base" onClick={() => startWorkout(day.id)}>
+            Start
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        <header>
+          <h1 className="font-heading text-3xl leading-none">Pick a workout</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Log what you do. You can save before the list is finished.
+          </p>
+        </header>
+        {workoutCatalog().map((workout) => (
+          <button
+            key={workout.id}
+            type="button"
+            onClick={() => startWorkout(workout.id)}
+            className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-left"
+          >
+            <p className="font-medium">{workout.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {workout.exercises.length} lifts · {workout.durationMin} min
+            </p>
+          </button>
+        ))}
       </div>
     );
   }
+
+  if (!day) return null;
 
   return (
     <div className="space-y-5">
@@ -385,7 +384,7 @@ export function WorkoutSessionView() {
         );
       })}
 
-      {(showAfter || session.status === "completed") && (
+      {(counts && counts.completedSets > 0) || session.status === "completed" ? (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">How you feel after</CardTitle>
@@ -448,28 +447,34 @@ export function WorkoutSessionView() {
             </p>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {session.status !== "completed" ? (
-        <Button
-          size="lg"
-          className="h-12 w-full text-base"
-          onClick={() => {
-            const finished: WorkoutSession = {
-              ...session,
-              status: "completed",
-              finishedAt: new Date().toISOString(),
-              feelingAfter: session.feelingAfter ?? emptyAfter(),
-              updatedAt: new Date().toISOString(),
-            };
-            completeSession(finished);
-          }}
-        >
-          Finish and save
-        </Button>
+        <div className="space-y-2">
+          <Button
+            size="lg"
+            className="h-12 w-full text-base"
+            onClick={() => {
+              const finished: WorkoutSession = {
+                ...session,
+                status: "completed",
+                finishedAt: new Date().toISOString(),
+                feelingAfter: session.feelingAfter ?? emptyAfter(),
+                updatedAt: new Date().toISOString(),
+              };
+              completeSession(finished);
+            }}
+          >
+            Save progress
+          </Button>
+          <p className="text-center text-xs leading-5 text-muted-foreground">
+            {counts?.completedSets ?? 0} sets logged. Unfinished lifts are fine —
+            only the sets you marked are saved.
+          </p>
+        </div>
       ) : (
         <p className="text-center text-sm text-muted-foreground">
-          Saved. Next {day.id} day will start from these loads.
+          Saved. Those loads come back the next time you run this workout.
         </p>
       )}
     </div>

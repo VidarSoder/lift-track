@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { requestFromThisSite, siteOnlyResponse } from "@/lib/server/origin";
 import { isAuthedRequest } from "@/lib/server/request-auth";
 import { loadTrainingState, saveTrainingState } from "@/lib/server/training-store";
 import type { CacheBundle } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!requestFromThisSite(request)) return siteOnlyResponse();
   if (!(await isAuthedRequest())) {
     return NextResponse.json({ error: "Locked" }, { status: 401 });
   }
@@ -12,6 +14,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!requestFromThisSite(request)) return siteOnlyResponse();
   if (!(await isAuthedRequest())) {
     return NextResponse.json({ error: "Locked" }, { status: 401 });
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestFromThisSite, siteOnlyResponse } from "@/lib/server/origin";
 import { passphraseMatches } from "@/lib/server/secrets";
 import { sessionCookieOptions } from "@/lib/server/request-auth";
 import { loadTrainingState } from "@/lib/server/training-store";
@@ -17,6 +18,7 @@ function allowAttempt(ip: string) {
 }
 
 export async function POST(request: Request) {
+  if (!requestFromThisSite(request)) return siteOnlyResponse();
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   if (!allowAttempt(ip)) {

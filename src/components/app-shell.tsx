@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Dumbbell, Home, TrendingUp } from "lucide-react";
+import { Dumbbell, Home, LayoutGrid, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/", label: "Today", icon: Home },
-  { href: "/week", label: "Week", icon: CalendarDays },
+  { href: "/week", label: "Workouts", icon: LayoutGrid },
   { href: "/workout", label: "Lift", icon: Dumbbell },
   { href: "/progress", label: "Progress", icon: TrendingUp },
 ];

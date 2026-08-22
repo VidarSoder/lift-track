@@ -13,9 +13,10 @@ rules_version = '2';
 // Fields: date, dayId, title, status, startedAt, finishedAt,
 //   timeOfDay, feelingBefore, feelingAfter, exercises, updatedAt
 //
-// Client SDK access is denied. All reads/writes go through the
-// Next.js Admin SDK after a passphrase cookie check. Writes are
-// limited to the single athlete doc and today's session.
+// Client SDK access is denied. All reads/writes go through this
+// website's Next.js API (origin-locked) using the Admin SDK after
+// a passphrase cookie check. Writes are limited to the single
+// athlete document and today's session.
 // ===============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
