@@ -1,6 +1,6 @@
 import { ATHLETE_NAME } from "@/data/program";
 import { formatDateISO } from "@/lib/dates";
-import { applyCompletedSession, createAthlete } from "@/lib/session";
+import { applyCompletedSession, createAthlete, rememberProgress } from "@/lib/session";
 import type { AthleteDoc, CacheBundle, WorkoutSession } from "@/lib/types";
 
 const LOCAL_KEY = "training.cache";
@@ -85,6 +85,13 @@ export async function saveNow(bundle: CacheBundle) {
 
 export function saveCompleted(athlete: AthleteDoc, session: WorkoutSession) {
   const nextAthlete = applyCompletedSession(athlete, session);
+  const bundle = { athlete: nextAthlete, today: session };
+  void saveNow(bundle);
+  return bundle;
+}
+
+export function saveProgress(athlete: AthleteDoc, session: WorkoutSession) {
+  const nextAthlete = rememberProgress(athlete, session);
   const bundle = { athlete: nextAthlete, today: session };
   void saveNow(bundle);
   return bundle;

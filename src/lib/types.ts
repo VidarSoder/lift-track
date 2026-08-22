@@ -75,6 +75,7 @@ export type FeelingAfter = {
 export type SessionExercise = {
   exerciseId: string;
   sets: LoggedSet[];
+  done?: boolean;
 };
 
 export type WorkoutSession = {

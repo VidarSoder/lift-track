@@ -7,6 +7,7 @@ import type {
   LoggedSet,
   PersonalRecord,
   ProgramDay,
+  SessionExercise,
   SessionSummary,
   WorkoutSession,
 } from "@/lib/types";
@@ -85,6 +86,11 @@ export function sessionSetCounts(session: WorkoutSession) {
   return { plannedSets, completedSets };
 }
 
+export function liftIsDone(exercise: SessionExercise) {
+  if (exercise.done) return true;
+  return exercise.sets.length > 0 && exercise.sets.every((set) => set.done);
+}
+
 export function lastSetsFromSession(session: WorkoutSession) {
   return Object.fromEntries(
     session.exercises.map((exercise) => [exercise.exerciseId, exercise.sets]),
@@ -114,6 +120,23 @@ export function summarizeSession(session: WorkoutSession): SessionSummary {
     mood: session.feelingAfter?.mood,
     pump: session.feelingAfter?.pump,
   };
+}
+
+export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
+  return {
+    ...athlete,
+    lastSessionDate: session.date,
+    lastSessionStatus: session.status,
+    lastByDay: {
+      ...athlete.lastByDay,
+      [session.dayId]: {
+        date: session.date,
+        sets: lastSetsFromSession(session),
+      },
+    },
+    lastLoads: mergeLoads(athlete.lastLoads, session),
+    updatedAt: new Date().toISOString(),
+  } satisfies AthleteDoc;
 }
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {

@@ -71,6 +71,28 @@ function FormLoop({
   );
 }
 
+export function ExerciseThumb({
+  exerciseId,
+  name,
+  className,
+}: {
+  exerciseId: string;
+  name: string;
+  className?: string;
+}) {
+  const media = mediaFor(exerciseId);
+  if (!media) {
+    return <div className={cn("bg-secondary", className)} />;
+  }
+  return (
+    <img
+      src={photoUrl(media.slug, 0)}
+      alt={name}
+      className={cn("h-full w-full bg-black object-cover", className)}
+    />
+  );
+}
+
 function StillPhoto({
   slug,
   alt,

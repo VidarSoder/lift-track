@@ -11,7 +11,7 @@ import {
 import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { createAthlete, mergeLoads } from "@/lib/session";
-import { loadBundle, queueSave, saveCompleted, saveNow, unlockWithPassphrase } from "@/lib/store";
+import { loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
 
 type TrainingContextValue = {
@@ -22,7 +22,8 @@ type TrainingContextValue = {
   unlock: (passphrase: string) => Promise<boolean>;
   setAthlete: (athlete: AthleteDoc) => void;
   setTodaySession: (session: WorkoutSession | undefined) => void;
-  persistSession: (session: WorkoutSession) => void;
+  persistSession: (session: WorkoutSession, options?: { immediate?: boolean }) => void;
+  saveSessionProgress: (session: WorkoutSession) => void;
   completeSession: (session: WorkoutSession) => void;
   flush: () => Promise<void>;
 };
@@ -72,7 +73,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persistSession = useCallback(
-    (session: WorkoutSession) => {
+    (session: WorkoutSession, options?: { immediate?: boolean }) => {
       setTodaySessionState(session);
       const nextAthlete = {
         ...athlete,
@@ -82,7 +83,19 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         updatedAt: session.updatedAt,
       };
       setAthleteState(nextAthlete);
-      queueSave({ athlete: nextAthlete, today: session });
+      const bundle = { athlete: nextAthlete, today: session };
+      if (options?.immediate) void saveNow(bundle);
+      else queueSave(bundle);
+    },
+    [athlete],
+  );
+
+  const saveSessionProgress = useCallback(
+    (session: WorkoutSession) => {
+      const next = { ...session, updatedAt: new Date().toISOString() };
+      const bundle = saveProgress(athlete, next);
+      setAthleteState(bundle.athlete);
+      setTodaySessionState(bundle.today);
     },
     [athlete],
   );
@@ -122,6 +135,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       setAthlete,
       setTodaySession,
       persistSession,
+      saveSessionProgress,
       completeSession,
       flush,
     }),
@@ -131,6 +145,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       flush,
       persistSession,
       ready,
+      saveSessionProgress,
       setAthlete,
       setTodaySession,
       todaySession,

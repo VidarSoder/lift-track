@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Minus, Plus } from "lucide-react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession } from "@/lib/active-session";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
@@ -12,6 +13,7 @@ import {
   createSession,
   emptyAfter,
   lastLoad,
+  liftIsDone,
   previousSets,
   sessionSetCounts,
 } from "@/lib/session";
@@ -19,6 +21,7 @@ import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
   ExerciseHowButton,
   ExerciseHowPanel,
+  ExerciseThumb,
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
 import { ExerciseMark } from "@/components/exercise-mark";
@@ -26,7 +29,7 @@ import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -129,7 +132,7 @@ function SetRow({
           })
         }
       >
-        {set.done ? "Done" : "Log"}
+        {set.done ? "Saved" : "Save set"}
       </Button>
       {previous?.weight || lastKg ? (
         <p className="col-span-4 px-1 text-[11px] text-muted-foreground">
@@ -142,11 +145,19 @@ function SetRow({
 }
 
 export function WorkoutSessionView() {
-  const { athlete, todaySession, persistSession, completeSession } =
-    useTraining();
+  const {
+    athlete,
+    todaySession,
+    persistSession,
+    saveSessionProgress,
+    completeSession,
+  } = useTraining();
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
   const [openHow, setOpenHow] = useState<string | null>(null);
+  const [beforeOpen, setBeforeOpen] = useState(true);
+  const [afterOpen, setAfterOpen] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const session = isOpenSession(todaySession, today)
     ? todaySession
@@ -177,8 +188,16 @@ export function WorkoutSessionView() {
     persistSession(next);
   }
 
-  function patch(next: WorkoutSession) {
-    persistSession({ ...next, updatedAt: new Date().toISOString() });
+  function patch(next: WorkoutSession, immediate = false) {
+    persistSession(
+      { ...next, updatedAt: new Date().toISOString() },
+      { immediate },
+    );
+  }
+
+  function isExpanded(id: string, done: boolean) {
+    if (id in expanded) return expanded[id];
+    return !done;
   }
 
   if (!viewingSession) {
@@ -265,80 +284,99 @@ export function WorkoutSessionView() {
       </header>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Before you lift</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-4 gap-1.5">
-            {TIMES.map((time) => (
-              <button
-                key={time}
-                type="button"
-                onClick={() => patch({ ...session, timeOfDay: time })}
-                className={cn(
-                  "h-10 rounded-lg text-[11px] font-medium capitalize",
-                  session.timeOfDay === time
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground",
-                )}
-              >
-                {time}
-              </button>
-            ))}
+        <button
+          type="button"
+          onClick={() => setBeforeOpen((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        >
+          <div>
+            <p className="text-base font-medium">Before you lift</p>
+            {!beforeOpen ? (
+              <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                {session.timeOfDay} · energy {session.feelingBefore.energy}/5
+              </p>
+            ) : null}
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
-            {suggestedWindow(session.timeOfDay)}
-          </p>
-          <ScoreRow
-            label="Energy"
-            value={session.feelingBefore.energy}
-            onChange={(energy) =>
-              patch({
-                ...session,
-                feelingBefore: { ...session.feelingBefore, energy },
-              })
-            }
-            low="Flat"
-            high="Ready"
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              beforeOpen && "rotate-180",
+            )}
           />
-          <ScoreRow
-            label="Sleep last night"
-            value={session.feelingBefore.sleep}
-            onChange={(sleep) =>
-              patch({
-                ...session,
-                feelingBefore: { ...session.feelingBefore, sleep },
-              })
-            }
-            low="Rough"
-            high="Deep"
-          />
-          <ScoreRow
-            label="Soreness"
-            value={session.feelingBefore.soreness}
-            onChange={(soreness) =>
-              patch({
-                ...session,
-                feelingBefore: { ...session.feelingBefore, soreness },
-              })
-            }
-            low="Fresh"
-            high="Beat up"
-          />
-          <Textarea
-            placeholder="Anything that should change the plan today?"
-            value={session.feelingBefore.notes}
-            onChange={(event) =>
-              patch({
-                ...session,
-                feelingBefore: {
-                  ...session.feelingBefore,
-                  notes: event.target.value,
-                },
-              })
-            }
-          />
-        </CardContent>
+        </button>
+        {beforeOpen ? (
+          <CardContent className="space-y-4 pt-0">
+            <div className="grid grid-cols-4 gap-1.5">
+              {TIMES.map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => patch({ ...session, timeOfDay: time })}
+                  className={cn(
+                    "h-10 rounded-lg text-[11px] font-medium capitalize",
+                    session.timeOfDay === time
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground",
+                  )}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              {suggestedWindow(session.timeOfDay)}
+            </p>
+            <ScoreRow
+              label="Energy"
+              value={session.feelingBefore.energy}
+              onChange={(energy) =>
+                patch({
+                  ...session,
+                  feelingBefore: { ...session.feelingBefore, energy },
+                })
+              }
+              low="Flat"
+              high="Ready"
+            />
+            <ScoreRow
+              label="Sleep last night"
+              value={session.feelingBefore.sleep}
+              onChange={(sleep) =>
+                patch({
+                  ...session,
+                  feelingBefore: { ...session.feelingBefore, sleep },
+                })
+              }
+              low="Rough"
+              high="Deep"
+            />
+            <ScoreRow
+              label="Soreness"
+              value={session.feelingBefore.soreness}
+              onChange={(soreness) =>
+                patch({
+                  ...session,
+                  feelingBefore: { ...session.feelingBefore, soreness },
+                })
+              }
+              low="Fresh"
+              high="Beat up"
+            />
+            <Textarea
+              placeholder="Anything that should change the plan today?"
+              value={session.feelingBefore.notes}
+              onChange={(event) =>
+                patch({
+                  ...session,
+                  feelingBefore: {
+                    ...session.feelingBefore,
+                    notes: event.target.value,
+                  },
+                })
+              }
+            />
+          </CardContent>
+        ) : null}
       </Card>
 
       {day.exercises.map((exercise, exerciseIndex) => {
@@ -349,77 +387,147 @@ export function WorkoutSessionView() {
         const prev = previousSets(athlete, session.dayId, exercise.id);
         const load = lastLoad(athlete, exercise.id);
         const howOpen = openHow === exercise.id;
+        const done = liftIsDone(logged);
+        const open = isExpanded(exercise.id, done);
+        const doneSets = logged.sets.filter((set) => set.done).length;
         return (
           <Card key={exercise.id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <ExerciseMark id={exercise.id} />
-                  <div>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {exerciseIndex + 1} · {exercise.group}
-                    {exercise.supersetWith ? " · pair" : ""}
-                  </p>
-                  <CardTitle className="text-lg leading-tight">
-                    {exercise.name}
-                  </CardTitle>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {exercise.sets} × {exercise.reps}
-                    {exercise.tempo ? ` · tempo ${exercise.tempo}` : ""}
-                    {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
-                    {load ? ` · last ${load.weight} kg` : ""}
-                  </p>
+            <button
+              type="button"
+              onClick={() =>
+                setExpanded((current) => ({
+                  ...current,
+                  [exercise.id]: !open,
+                }))
+              }
+              className="flex w-full items-center gap-3 px-4 py-3 text-left"
+            >
+              <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
+                <ExerciseThumb exerciseId={exercise.id} name={exercise.name} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {exerciseIndex + 1} · {exercise.group}
+                  {done ? " · done" : ""}
+                </p>
+                <p className="font-medium leading-tight">{exercise.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {doneSets}/{exercise.sets} sets
+                  {load ? ` · last ${load.weight} kg` : ""}
+                </p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "size-4 shrink-0 text-muted-foreground transition-transform",
+                  open && "rotate-180",
+                )}
+              />
+            </button>
+            {open ? (
+              <CardContent className="space-y-2 pt-0">
+                <div className="flex items-center justify-between gap-3">
+                  <ExerciseMark id={exercise.id} size="sm" />
+                  <div className="flex items-center gap-2">
+                    <ExerciseHowButton
+                      open={howOpen}
+                      onToggle={() =>
+                        setOpenHow((current) =>
+                          current === exercise.id ? null : exercise.id,
+                        )
+                      }
+                    />
+                    {done ? null : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const startWeight = load?.weight ?? prev[0]?.weight ?? 20;
+                          const startReps = prev[0]?.reps ?? 8;
+                          const exercises = session.exercises.map((item) =>
+                            item.exerciseId === exercise.id
+                              ? {
+                                  ...item,
+                                  done: true,
+                                  sets: item.sets.map((set) => ({
+                                    ...set,
+                                    weight: set.weight ?? startWeight,
+                                    reps: set.reps ?? startReps,
+                                    done: true,
+                                  })),
+                                }
+                              : item,
+                          );
+                          patch({ ...session, exercises }, true);
+                          setExpanded((current) => ({
+                            ...current,
+                            [exercise.id]: false,
+                          }));
+                          setOpenHow(null);
+                        }}
+                      >
+                        Done
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <ExerciseHowButton
+                <ExerciseHowPanel
+                  exercise={exercise}
                   open={howOpen}
-                  onToggle={() =>
-                    setOpenHow((current) =>
-                      current === exercise.id ? null : exercise.id,
-                    )
-                  }
+                  onClose={() => setOpenHow(null)}
                 />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <ExerciseHowPanel
-                exercise={exercise}
-                open={howOpen}
-                onClose={() => setOpenHow(null)}
-              />
-              {logged.sets.map((set, index) => (
-                <SetRow
-                  key={`${exercise.id}-${index}`}
-                  index={index}
-                  set={set}
-                  previous={prev[index]}
-                  lastKg={load?.weight}
-                  onChange={(nextSet) => {
-                    const exercises = session.exercises.map((item) =>
-                      item.exerciseId === exercise.id
-                        ? {
-                            ...item,
-                            sets: item.sets.map((current, setIndex) =>
-                              setIndex === index ? nextSet : current,
-                            ),
-                          }
-                        : item,
-                    );
-                    patch({ ...session, exercises });
-                  }}
-                />
-              ))}
-            </CardContent>
+                {logged.sets.map((set, index) => (
+                  <SetRow
+                    key={`${exercise.id}-${index}`}
+                    index={index}
+                    set={set}
+                    previous={prev[index]}
+                    lastKg={load?.weight}
+                    onChange={(nextSet) => {
+                      const exercises = session.exercises.map((item) => {
+                        if (item.exerciseId !== exercise.id) return item;
+                        const sets = item.sets.map((current, setIndex) =>
+                          setIndex === index ? nextSet : current,
+                        );
+                        const allDone = sets.every((entry) => entry.done);
+                        return { ...item, sets, done: allDone };
+                      });
+                      patch({ ...session, exercises }, nextSet.done);
+                      if (
+                        nextSet.done &&
+                        exercises.find((item) => item.exerciseId === exercise.id)
+                          ?.done
+                      ) {
+                        setExpanded((current) => ({
+                          ...current,
+                          [exercise.id]: false,
+                        }));
+                      }
+                    }}
+                  />
+                ))}
+              </CardContent>
+            ) : null}
           </Card>
         );
       })}
 
       {(counts && counts.completedSets > 0) || session.status === "completed" ? (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">How you feel after</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setAfterOpen((value) => !value)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <p className="text-base font-medium">How you feel after</p>
+            <ChevronDown
+              className={cn(
+                "size-4 shrink-0 text-muted-foreground transition-transform",
+                afterOpen && "rotate-180",
+              )}
+            />
+          </button>
+          {afterOpen ? (
+          <CardContent className="space-y-4 pt-0">
             <ScoreRow
               label="Pump"
               value={session.feelingAfter?.pump ?? 3}
@@ -476,11 +584,23 @@ export function WorkoutSessionView() {
               {FEEL_GUIDE.afterGood} {FEEL_GUIDE.food}
             </p>
           </CardContent>
+          ) : null}
         </Card>
       ) : null}
 
       {session.status !== "completed" ? (
         <div className="space-y-2">
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-12 w-full text-base"
+            onClick={() => {
+              saveSessionProgress(session);
+              toast.success("Progress saved. Session stays open.");
+            }}
+          >
+            Save progress
+          </Button>
           <Button
             size="lg"
             className="h-12 w-full text-base"
@@ -493,13 +613,14 @@ export function WorkoutSessionView() {
                 updatedAt: new Date().toISOString(),
               };
               completeSession(finished);
+              toast.success("Session finished.");
             }}
           >
-            Save progress
+            Finish session
           </Button>
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {counts?.completedSets ?? 0} sets logged. Unfinished lifts are fine —
-            only the sets you marked are saved.
+            {counts?.completedSets ?? 0} sets saved. Save progress keeps the
+            session open. Finish closes it.
           </p>
         </div>
       ) : (
