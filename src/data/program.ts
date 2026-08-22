@@ -1,4 +1,4 @@
-import type { ProgramDay, Weekday } from "@/lib/types";
+import type { Exercise, ProgramDay, Weekday } from "@/lib/types";
 
 export const ATHLETE_NAME = "Vidar";
 export const PROGRAM_NAME = "Get Huge Arms";
@@ -721,6 +721,34 @@ export function dayByWeekday(weekday: Weekday) {
 
 export function dayById(id: string) {
   return DAYS.find((day) => day.id === id);
+}
+
+export function uniqueExercises() {
+  const seen = new Set<string>();
+  const list: Exercise[] = [];
+  for (const day of DAYS) {
+    for (const exercise of day.exercises) {
+      if (seen.has(exercise.id)) continue;
+      seen.add(exercise.id);
+      list.push(exercise);
+    }
+  }
+  return list;
+}
+
+export function exercisesByMuscle() {
+  const groups: { group: string; exercises: Exercise[] }[] = [];
+  const index = new Map<string, Exercise[]>();
+  for (const exercise of uniqueExercises()) {
+    let bucket = index.get(exercise.group);
+    if (!bucket) {
+      bucket = [];
+      index.set(exercise.group, bucket);
+      groups.push({ group: exercise.group, exercises: bucket });
+    }
+    bucket.push(exercise);
+  }
+  return groups;
 }
 
 export const TIME_TIPS = [

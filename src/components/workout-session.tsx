@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
 import { workoutCatalog } from "@/lib/suggest";
@@ -13,6 +13,7 @@ import {
   sessionSetCounts,
 } from "@/lib/session";
 import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
+import { ExerciseHowButton, WorkoutExercisePreview } from "@/components/exercise-guide";
 import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +135,6 @@ export function WorkoutSessionView() {
     useTraining();
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
-  const [openHow, setOpenHow] = useState<string | null>(null);
 
   const session = todaySession && todaySession.date === today ? todaySession : undefined;
   const picked = pick ? dayById(pick) : undefined;
@@ -171,9 +171,16 @@ export function WorkoutSessionView() {
             <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
           </header>
-          <Button size="lg" className="h-12 w-full text-base" onClick={() => startWorkout(day.id)}>
-            Start
-          </Button>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Check the pictures and videos first. Tap a lift for the GIF, start
+            and finish stills, and the form video.
+          </p>
+          <WorkoutExercisePreview exercises={day.exercises} />
+          <div className="sticky bottom-24 z-10">
+            <Button size="lg" className="h-12 w-full text-base shadow-lg" onClick={() => startWorkout(day.id)}>
+              Start this workout
+            </Button>
+          </div>
         </div>
       );
     }
@@ -186,17 +193,16 @@ export function WorkoutSessionView() {
           </p>
         </header>
         {workoutCatalog().map((workout) => (
-          <button
+          <Link
             key={workout.id}
-            type="button"
-            onClick={() => startWorkout(workout.id)}
-            className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-left"
+            href={`/workout?pick=${workout.id}`}
+            className="block w-full rounded-2xl border border-border bg-card px-4 py-3 text-left"
           >
             <p className="font-medium">{workout.title}</p>
             <p className="text-xs text-muted-foreground">
-              {workout.exercises.length} lifts · {workout.durationMin} min
+              {workout.exercises.length} lifts · {workout.durationMin} min · preview first
             </p>
-          </button>
+          </Link>
         ))}
       </div>
     );
@@ -303,7 +309,6 @@ export function WorkoutSessionView() {
         );
         if (!logged) return null;
         const prev = previousSets(athlete, session.dayId, exercise.id);
-        const open = openHow === exercise.id;
         return (
           <Card key={exercise.id}>
             <CardHeader className="pb-2">
@@ -322,42 +327,10 @@ export function WorkoutSessionView() {
                     {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setOpenHow(open ? null : exercise.id)}
-                >
-                  How
-                  {open ? (
-                    <ChevronUp className="size-4" />
-                  ) : (
-                    <ChevronDown className="size-4" />
-                  )}
-                </Button>
+                <ExerciseHowButton exercise={exercise} label="How" />
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {open ? (
-                <div className="space-y-2 rounded-xl bg-secondary/70 p-3 text-sm leading-6 text-muted-foreground">
-                  <p>
-                    <span className="font-medium text-foreground">Setup. </span>
-                    {exercise.setup}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Make the rep. </span>
-                    {exercise.how}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Don&apos;t. </span>
-                    {exercise.mistakes}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Add weight when. </span>
-                    {exercise.progress}
-                  </p>
-                </div>
-              ) : null}
               {logged.sets.map((set, index) => (
                 <SetRow
                   key={`${exercise.id}-${index}`}

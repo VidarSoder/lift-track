@@ -72,6 +72,17 @@ export function TodayView() {
         </Card>
       )}
 
+      <Link
+        href="/week"
+        className="block rounded-2xl border border-border bg-card px-4 py-3"
+      >
+        <p className="font-medium">Preview every lift first</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Photos, a looping GIF, and a video for each exercise. Open Form any
+          time — nothing starts from there.
+        </p>
+      </Link>
+
       <div className="space-y-2">
         <p className="text-sm font-medium">Or pick another</p>
         {workoutCatalog().map((workout) => {
