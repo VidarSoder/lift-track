@@ -69,6 +69,7 @@ export type FeelingAfter = {
   pump: number;
   fatigue: number;
   mood: number;
+  joints?: number;
   notes: string;
 };
 
@@ -88,6 +89,8 @@ export type WorkoutSession = {
   timeOfDay: TimeOfDay;
   feelingBefore: FeelingBefore;
   feelingAfter?: FeelingAfter;
+  feelingBeforeSaved?: boolean;
+  feelingAfterSaved?: boolean;
   exercises: SessionExercise[];
   updatedAt: string;
 };

@@ -17,7 +17,7 @@ export function emptyFeeling() {
 }
 
 export function emptyAfter() {
-  return { pump: 3, fatigue: 3, mood: 3, notes: "" };
+  return { pump: 3, fatigue: 3, mood: 3, joints: 2, notes: "" };
 }
 
 export function blankSets(count: number): LoggedSet[] {

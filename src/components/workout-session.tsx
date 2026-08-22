@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Minus, Plus } from "lucide-react";
@@ -164,10 +164,12 @@ export function WorkoutSessionView() {
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
   const [openHow, setOpenHow] = useState<string | null>(null);
-  const [beforeOpen, setBeforeOpen] = useState(true);
-  const [afterOpen, setAfterOpen] = useState(true);
+  const [beforeOpen, setBeforeOpen] = useState<boolean | undefined>(undefined);
+  const [afterOpen, setAfterOpen] = useState<boolean | undefined>(undefined);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [askAfter, setAskAfter] = useState(false);
+  const afterRef = useRef<HTMLDivElement>(null);
 
   const session = todaysSession(todaySession, today);
   const picked = pick ? dayById(pick) : undefined;
@@ -204,6 +206,20 @@ export function WorkoutSessionView() {
   function isExpanded(id: string, done: boolean) {
     if (id in expanded) return expanded[id];
     return !done;
+  }
+
+  function finishSession(current = session) {
+    if (!current) return;
+    const finished: WorkoutSession = {
+      ...current,
+      status: "completed",
+      finishedAt: new Date().toISOString(),
+      feelingAfter: current.feelingAfter ?? emptyAfter(),
+      feelingAfterSaved: true,
+      updatedAt: new Date().toISOString(),
+    };
+    completeSession(finished);
+    toast.success("Session finished.");
   }
 
   if (!viewingSession) {
@@ -303,13 +319,18 @@ export function WorkoutSessionView() {
       <Card>
         <button
           type="button"
-          onClick={() => setBeforeOpen((value) => !value)}
+          onClick={() =>
+            setBeforeOpen((value) =>
+              !(value ?? !session.feelingBeforeSaved),
+            )
+          }
           className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         >
           <div>
             <p className="text-base font-medium">Before you lift</p>
-            {!beforeOpen ? (
+            {!(beforeOpen ?? !session.feelingBeforeSaved) ? (
               <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                {session.feelingBeforeSaved ? "Saved · " : ""}
                 {session.timeOfDay} · energy {session.feelingBefore.energy}/5
               </p>
             ) : null}
@@ -317,11 +338,11 @@ export function WorkoutSessionView() {
           <ChevronDown
             className={cn(
               "size-4 shrink-0 text-muted-foreground transition-transform",
-              beforeOpen && "rotate-180",
+              (beforeOpen ?? !session.feelingBeforeSaved) && "rotate-180",
             )}
           />
         </button>
-        {beforeOpen ? (
+        {(beforeOpen ?? !session.feelingBeforeSaved) ? (
           <CardContent className="space-y-4 pt-0">
             <div className="grid grid-cols-4 gap-1.5">
               {TIMES.map((time) => (
@@ -392,6 +413,16 @@ export function WorkoutSessionView() {
                 })
               }
             />
+            <Button
+              className="h-11 w-full"
+              onClick={() => {
+                patch({ ...session, feelingBeforeSaved: true }, true);
+                setBeforeOpen(false);
+                toast.success("Check-in saved");
+              }}
+            >
+              Save check-in
+            </Button>
           </CardContent>
         ) : null}
       </Card>
@@ -528,22 +559,37 @@ export function WorkoutSessionView() {
         );
       })}
 
-      {(counts && counts.completedSets > 0) || session.status === "completed" ? (
+      {(counts && counts.completedSets > 0) ||
+      session.status === "completed" ||
+      askAfter ||
+      session.feelingAfterSaved ? (
+        <div ref={afterRef}>
         <Card>
           <button
             type="button"
-            onClick={() => setAfterOpen((value) => !value)}
+            onClick={() =>
+              setAfterOpen((value) => !(value ?? askAfter))
+            }
             className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
           >
-            <p className="text-base font-medium">How you feel after</p>
+            <div>
+              <p className="text-base font-medium">How you feel after</p>
+              {!(afterOpen ?? askAfter) ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {session.feelingAfterSaved
+                    ? `Saved · pump ${session.feelingAfter?.pump ?? 3}/5`
+                    : "Tap when you are done"}
+                </p>
+              ) : null}
+            </div>
             <ChevronDown
               className={cn(
                 "size-4 shrink-0 text-muted-foreground transition-transform",
-                afterOpen && "rotate-180",
+                (afterOpen ?? askAfter) && "rotate-180",
               )}
             />
           </button>
-          {afterOpen ? (
+          {(afterOpen ?? askAfter) ? (
           <CardContent className="space-y-4 pt-0">
             <ScoreRow
               label="Pump"
@@ -556,6 +602,21 @@ export function WorkoutSessionView() {
               }
               low="None"
               high="Skin tight"
+            />
+            <ScoreRow
+              label="Joints"
+              value={session.feelingAfter?.joints ?? 2}
+              onChange={(joints) =>
+                patch({
+                  ...session,
+                  feelingAfter: {
+                    ...(session.feelingAfter ?? emptyAfter()),
+                    joints,
+                  },
+                })
+              }
+              low="Quiet"
+              high="Angry"
             />
             <ScoreRow
               label="Fatigue"
@@ -600,9 +661,29 @@ export function WorkoutSessionView() {
             <p className="text-xs leading-5 text-muted-foreground">
               {FEEL_GUIDE.afterGood} {FEEL_GUIDE.food}
             </p>
+            {session.status !== "completed" ? (
+              <Button
+                className="h-11 w-full"
+                onClick={() => {
+                  const next = {
+                    ...session,
+                    feelingAfter: session.feelingAfter ?? emptyAfter(),
+                    feelingAfterSaved: true,
+                  };
+                  patch(next, true);
+                  setAfterOpen(false);
+                  setAskAfter(false);
+                  if (askAfter) finishSession(next);
+                  else toast.success("After check-in saved");
+                }}
+              >
+                {askAfter ? "Save and finish" : "Save after check-in"}
+              </Button>
+            ) : null}
           </CardContent>
           ) : null}
         </Card>
+        </div>
       ) : null}
 
       {session.status !== "completed" ? (
@@ -622,22 +703,24 @@ export function WorkoutSessionView() {
             size="lg"
             className="h-12 w-full text-base"
             onClick={() => {
-              const finished: WorkoutSession = {
-                ...session,
-                status: "completed",
-                finishedAt: new Date().toISOString(),
-                feelingAfter: session.feelingAfter ?? emptyAfter(),
-                updatedAt: new Date().toISOString(),
-              };
-              completeSession(finished);
-              toast.success("Session finished.");
+              if (!session.feelingAfterSaved) {
+                setAskAfter(true);
+                setAfterOpen(true);
+                toast.message("How did that feel?");
+                window.setTimeout(() => {
+                  afterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+                return;
+              }
+              finishSession();
             }}
           >
             Finish session
           </Button>
           <p className="text-center text-xs leading-5 text-muted-foreground">
             {counts?.completedSets ?? 0} sets. Save progress keeps it open.
-            Finish always saves and closes. Cancel is only if you want out.
+            Finish asks how you feel after, then always saves. Cancel is only if
+            you want out.
           </p>
         </div>
       ) : (
