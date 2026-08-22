@@ -123,6 +123,45 @@ export function summarizeSession(session: WorkoutSession): SessionSummary {
   };
 }
 
+export function stripTodaysProgress(athlete: AthleteDoc, today: string) {
+  const lastLoads = { ...(athlete.lastLoads ?? {}) };
+  for (const [id, load] of Object.entries(lastLoads)) {
+    if (load.date === today) delete lastLoads[id];
+  }
+  const lastByDay = { ...athlete.lastByDay };
+  for (const key of Object.keys(lastByDay) as DayKind[]) {
+    if (lastByDay[key]?.date === today) delete lastByDay[key];
+  }
+  return {
+    ...athlete,
+    lastLoads,
+    lastByDay,
+    lastSessionStatus: "skipped" as const,
+    updatedAt: new Date().toISOString(),
+  } satisfies AthleteDoc;
+}
+
+export function cancelWorkout(
+  athlete: AthleteDoc,
+  session: WorkoutSession,
+  keepProgress: boolean,
+) {
+  const closed: WorkoutSession = {
+    ...session,
+    status: "skipped",
+    finishedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    exercises: keepProgress ? session.exercises : [],
+  };
+  const nextAthlete = keepProgress
+    ? rememberProgress(athlete, closed)
+    : stripTodaysProgress(athlete, session.date);
+  return {
+    athlete: { ...nextAthlete, lastSessionStatus: "skipped" as const },
+    today: closed,
+  };
+}
+
 export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
   return {
     ...athlete,

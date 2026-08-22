@@ -123,8 +123,12 @@
   }
   html {
     @apply font-sans h-full overflow-hidden overscroll-none;
+    height: 100%;
+    height: -webkit-fill-available;
   }
   body {
-    @apply h-full overflow-hidden overscroll-none bg-background text-foreground;
+    @apply overflow-hidden overscroll-none bg-background text-foreground;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
   }
 }

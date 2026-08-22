@@ -1,10 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, Images, Settings, TrendingUp } from "lucide-react";
 import { ActiveSessionFab } from "@/components/active-session-fab";
+import { PullToRefresh } from "@/components/pull-to-refresh";
+import { useTraining } from "@/components/training-provider";
+import { useViewportShell } from "@/lib/viewport-shell";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -17,16 +20,25 @@ const LINKS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { reload } = useTraining();
+  const shell = useRef<HTMLDivElement>(null);
+  useViewportShell(shell);
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-hidden bg-background">
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-5">
+    <div
+      ref={shell}
+      className="fixed inset-0 mx-auto flex w-full max-w-md flex-col overflow-hidden bg-background"
+    >
+      <PullToRefresh
+        onRefresh={reload}
+        className="px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-5"
+      >
         {children}
-      </main>
+      </PullToRefresh>
       <Suspense fallback={null}>
         <ActiveSessionFab />
       </Suspense>
-      <nav className="shrink-0 border-t border-border/80 bg-background px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+      <nav className="shrink-0 border-t border-border/80 bg-background px-2 pt-2 pb-[max(0.4rem,env(safe-area-inset-bottom))]">
         <ul className="grid grid-cols-5 gap-1">
           {LINKS.map((link) => {
             const active =

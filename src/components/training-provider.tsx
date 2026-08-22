@@ -11,8 +11,13 @@ import {
 import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { createAthlete, mergeLoads } from "@/lib/session";
-import { loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
+import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
+
+function hydrateToday(session?: WorkoutSession) {
+  if (!session || session.status === "skipped") return undefined;
+  return session;
+}
 
 type TrainingContextValue = {
   ready: boolean;
@@ -25,6 +30,8 @@ type TrainingContextValue = {
   persistSession: (session: WorkoutSession, options?: { immediate?: boolean }) => void;
   saveSessionProgress: (session: WorkoutSession) => void;
   completeSession: (session: WorkoutSession) => void;
+  cancelSession: (session: WorkoutSession, keepProgress: boolean) => void;
+  reload: () => Promise<void>;
   flush: () => Promise<void>;
 };
 
@@ -52,7 +59,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setAthleteState(bundle.athlete);
-      setTodaySessionState(bundle.today);
+      setTodaySessionState(hydrateToday(bundle.today));
       setUnlocked(true);
       setReady(true);
     }
@@ -67,7 +74,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     if (!bundle) return false;
     persistUnlock();
     setAthleteState(bundle.athlete);
-    setTodaySessionState(bundle.today);
+    setTodaySessionState(hydrateToday(bundle.today));
     setUnlocked(true);
     return true;
   }, []);
@@ -109,6 +116,22 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     [athlete],
   );
 
+  const cancelSession = useCallback(
+    (session: WorkoutSession, keepProgress: boolean) => {
+      const bundle = abandonSession(athlete, session, keepProgress);
+      setAthleteState(bundle.athlete);
+      setTodaySessionState(undefined);
+    },
+    [athlete],
+  );
+
+  const reload = useCallback(async () => {
+    const bundle = await loadBundle();
+    if (!bundle) return;
+    setAthleteState(bundle.athlete);
+    setTodaySessionState(hydrateToday(bundle.today));
+  }, []);
+
   const setAthlete = useCallback(
     (next: AthleteDoc, options?: { immediate?: boolean }) => {
       setAthleteState(next);
@@ -139,12 +162,16 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       persistSession,
       saveSessionProgress,
       completeSession,
+      cancelSession,
+      reload,
       flush,
     }),
     [
       athlete,
+      cancelSession,
       completeSession,
       flush,
+      reload,
       persistSession,
       ready,
       saveSessionProgress,

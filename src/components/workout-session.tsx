@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
-import { isOpenSession } from "@/lib/active-session";
+import { isOpenSession, todaysSession } from "@/lib/active-session";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
 import { workoutCatalog } from "@/lib/suggest";
 import {
@@ -30,6 +30,13 @@ import { ScoreRow } from "@/components/score-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -151,19 +158,18 @@ export function WorkoutSessionView() {
     persistSession,
     saveSessionProgress,
     completeSession,
+    cancelSession,
   } = useTraining();
+  const router = useRouter();
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
   const [openHow, setOpenHow] = useState<string | null>(null);
   const [beforeOpen, setBeforeOpen] = useState(true);
   const [afterOpen, setAfterOpen] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [cancelOpen, setCancelOpen] = useState(false);
 
-  const session = isOpenSession(todaySession, today)
-    ? todaySession
-    : todaySession && todaySession.date === today
-      ? todaySession
-      : undefined;
+  const session = todaysSession(todaySession, today);
   const picked = pick ? dayById(pick) : undefined;
   const viewingSession =
     Boolean(session) && (!picked || picked.id === session?.dayId);
@@ -278,9 +284,20 @@ export function WorkoutSessionView() {
           ) : null}
         </div>
         <h1 className="font-heading text-3xl leading-none">{day.title}</h1>
-        <Link href="/week" className="inline-block text-sm text-muted-foreground underline">
-          Browse other lifts
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/week" className="text-sm text-muted-foreground underline">
+            Browse other lifts
+          </Link>
+          {session.status === "in_progress" ? (
+            <button
+              type="button"
+              onClick={() => setCancelOpen(true)}
+              className="text-sm text-muted-foreground underline"
+            >
+              Cancel session
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <Card>
@@ -619,8 +636,8 @@ export function WorkoutSessionView() {
             Finish session
           </Button>
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {counts?.completedSets ?? 0} sets saved. Save progress keeps the
-            session open. Finish closes it.
+            {counts?.completedSets ?? 0} sets. Save progress keeps it open.
+            Finish always saves and closes. Cancel is only if you want out.
           </p>
         </div>
       ) : (
@@ -628,6 +645,50 @@ export function WorkoutSessionView() {
           Saved. Those loads come back the next time you run this workout.
         </p>
       )}
+
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancel this session?</DialogTitle>
+            <DialogDescription>
+              Finish always saves. This is only if you want to drop the session.
+              Default is keep the kg you already logged.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Button
+              className="h-11 w-full"
+              onClick={() => {
+                cancelSession(session, true);
+                setCancelOpen(false);
+                toast.success("Session closed. Progress kept.");
+                router.replace("/");
+              }}
+            >
+              Save progress and close
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 w-full"
+              onClick={() => {
+                cancelSession(session, false);
+                setCancelOpen(false);
+                toast.success("Session removed.");
+                router.replace("/");
+              }}
+            >
+              Remove progress
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-11 w-full"
+              onClick={() => setCancelOpen(false)}
+            >
+              Keep training
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

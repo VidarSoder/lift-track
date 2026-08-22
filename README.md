@@ -8,6 +8,8 @@ Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that 
 
 **Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document.
 
+Pull down from the top of any page to refresh. Cancel an open session if you want out — save the kg (default) or remove it. Finish always saves.
+
 ## Weekly plan
 
 | Day | Session |
