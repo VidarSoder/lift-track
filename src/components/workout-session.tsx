@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, Minus, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Minus, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";
@@ -255,23 +255,32 @@ export function WorkoutSessionView() {
     if (day) {
       const locked = isOpenSession(session, today);
       return (
-        <div className="space-y-5">
-          <header>
-            <div className="flex items-center gap-3">
-              <ExerciseMark id={day.id} />
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-                {day.exercises.length} lifts · preview
-              </p>
-            </div>
-            <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
-          </header>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Still photos and last kg on the list. Tap a row for the GIF on this
-            page, then Back.
-          </p>
-          <WorkoutExercisePreview exercises={day.exercises} />
-          <div className="sticky bottom-24 z-10 space-y-2">
+        <div className="flex grow flex-col">
+          <div className="space-y-5">
+            <header>
+              <Link
+                href="/"
+                className="-ml-1 mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"
+              >
+                <ChevronLeft className="size-4" />
+                Back
+              </Link>
+              <div className="flex items-center gap-3">
+                <ExerciseMark id={day.id} />
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                  {day.exercises.length} lifts · preview
+                </p>
+              </div>
+              <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
+            </header>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Still photos and last kg on the list. Tap a row for the GIF on this
+              page, then Back.
+            </p>
+            <WorkoutExercisePreview exercises={day.exercises} />
+          </div>
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-auto border-t border-border/70 bg-background px-4 pt-3 pb-3">
             {locked ? (
               <p className="rounded-xl bg-secondary/80 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                 Preview only. Your current session stays open — use the floating

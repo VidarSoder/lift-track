@@ -94,7 +94,7 @@ export function PullToRefresh({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       className={cn(
-        "relative min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
+        "relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain",
         className,
       )}
     >
