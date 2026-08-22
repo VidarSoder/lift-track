@@ -82,7 +82,11 @@ export function ExerciseThumb({
 }) {
   const media = mediaFor(exerciseId);
   if (!media) {
-    return <div className={cn("bg-secondary", className)} />;
+    return (
+      <div className={cn("grid place-items-center bg-secondary", className)}>
+        <ExerciseMark id={exerciseId} />
+      </div>
+    );
   }
   return (
     <img

@@ -6,9 +6,11 @@ import type {
   LastLoad,
   LoggedSet,
   PersonalRecord,
+  PinnedExercise,
   ProgramDay,
   SessionExercise,
   SessionSummary,
+  WarmupLog,
   WorkoutSession,
 } from "@/lib/types";
 
@@ -28,7 +30,14 @@ export function blankSets(count: number): LoggedSet[] {
   }));
 }
 
-export function createSession(day: ProgramDay, date = formatDateISO()): WorkoutSession {
+export function createSession(
+  day: ProgramDay,
+  date = formatDateISO(),
+  extras: PinnedExercise[] = [],
+  warmup?: WarmupLog,
+): WorkoutSession {
+  const seen = new Set(day.exercises.map((exercise) => exercise.id));
+  const extraLifts = extras.filter((item) => !seen.has(item.exerciseId));
   return {
     date,
     dayId: day.id,
@@ -37,10 +46,17 @@ export function createSession(day: ProgramDay, date = formatDateISO()): WorkoutS
     startedAt: new Date().toISOString(),
     timeOfDay: currentTimeOfDay(),
     feelingBefore: emptyFeeling(),
-    exercises: day.exercises.map((exercise) => ({
-      exerciseId: exercise.id,
-      sets: blankSets(exercise.sets),
-    })),
+    warmup,
+    exercises: [
+      ...day.exercises.map((exercise) => ({
+        exerciseId: exercise.id,
+        sets: blankSets(exercise.sets),
+      })),
+      ...extraLifts.map((item) => ({
+        exerciseId: item.exerciseId,
+        sets: blankSets(item.sets),
+      })),
+    ],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -55,6 +71,8 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     lastByDay: {},
     lastLoads: {},
     bodyWeight: [],
+    customExercises: [],
+    pinnedByDay: {},
     prs: {},
     recent: [],
     sessionsCompleted: 0,

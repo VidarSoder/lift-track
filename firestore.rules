@@ -5,7 +5,7 @@ rules_version = '2';
 // Collection: athletes
 // Document ID: 64-char sha256 hex of (passphrase + server salt)
 // Fields: name, timezone, programStartDate, lastSessionDate,
-//   lastSessionStatus, lastByDay, prs, recent, sessionsCompleted,
+//   lastSessionStatus, lastByDay, customExercises, pinnedByDay, prs, recent, sessionsCompleted,
 //   streak, updatedAt
 //
 // Collection: athletes/{id}/sessions

@@ -10,6 +10,7 @@ import { isOpenSession, todaysSession } from "@/lib/active-session";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
 import { workoutCatalog } from "@/lib/suggest";
 import {
+  blankSets,
   createSession,
   emptyAfter,
   lastLoad,
@@ -17,13 +18,16 @@ import {
   previousSets,
   sessionSetCounts,
 } from "@/lib/session";
-import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
+import { pinExercise, rememberCustom, resolveExercise } from "@/lib/exercises";
+import type { LoggedSet, TimeOfDay, WarmupLog, WorkoutSession } from "@/lib/types";
 import {
   ExerciseHowButton,
   ExerciseHowPanel,
   ExerciseThumb,
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
+import { AddExerciseButton } from "@/components/add-exercise";
+import { WarmupCard, WarmupPicker, warmupFromPreset } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
@@ -210,6 +214,7 @@ export function WorkoutSessionView() {
     athlete,
     todaySession,
     persistSession,
+    setAthlete,
     saveSessionProgress,
     completeSession,
     cancelSession,
@@ -224,6 +229,9 @@ export function WorkoutSessionView() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
+  const [pickedWarmup, setPickedWarmup] = useState<WarmupLog | undefined>(() =>
+    warmupFromPreset("run-7-then-4"),
+  );
   const afterRef = useRef<HTMLDivElement>(null);
 
   function celebrateDone(name: string, id: string) {
@@ -248,7 +256,8 @@ export function WorkoutSessionView() {
   function startWorkout(id: string) {
     const nextDay = dayById(id);
     if (!nextDay) return;
-    const next = createSession(nextDay, today);
+    const extras = athlete.pinnedByDay?.[nextDay.id] ?? [];
+    const next = createSession(nextDay, today, extras, pickedWarmup);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
       const fallback = lastLoad(athlete, exercise.exerciseId);
@@ -315,7 +324,53 @@ export function WorkoutSessionView() {
               Still photos and last kg on the list. Tap a row for the GIF on this
               page, then Back.
             </p>
-            <WorkoutExercisePreview exercises={day.exercises} />
+            <WarmupPicker value={pickedWarmup} onChange={setPickedWarmup} />
+            <WorkoutExercisePreview
+              exercises={[
+                ...day.exercises,
+                ...(athlete.pinnedByDay?.[day.id] ?? [])
+                  .filter(
+                    (item) =>
+                      !day.exercises.some((exercise) => exercise.id === item.exerciseId),
+                  )
+                  .map((item) =>
+                    resolveExercise(item.exerciseId, athlete, item.sets),
+                  ),
+              ]}
+            />
+            {locked ? null : (
+              <AddExerciseButton
+                athlete={athlete}
+                exclude={[
+                  ...day.exercises.map((exercise) => exercise.id),
+                  ...(athlete.pinnedByDay?.[day.id] ?? []).map(
+                    (item) => item.exerciseId,
+                  ),
+                ]}
+                onPick={(exercise) => {
+                  setAthlete(
+                    pinExercise(athlete, day.id, {
+                      exerciseId: exercise.id,
+                      sets: exercise.sets,
+                      reps: exercise.reps,
+                    }),
+                    { immediate: true },
+                  );
+                  toast.success(`${exercise.name} added to this program`);
+                }}
+                onCreate={(custom) => {
+                  setAthlete(
+                    pinExercise(rememberCustom(athlete, custom), day.id, {
+                      exerciseId: custom.id,
+                      sets: custom.sets,
+                      reps: custom.reps,
+                    }),
+                    { immediate: true },
+                  );
+                  toast.success(`${custom.name} saved on this program`);
+                }}
+              />
+            )}
           </div>
           <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-auto border-t border-border/70 bg-background px-4 pt-3 pb-3">
             {locked ? (
@@ -502,11 +557,22 @@ export function WorkoutSessionView() {
         ) : null}
       </Card>
 
-      {day.exercises.map((exercise, exerciseIndex) => {
-        const logged = session.exercises.find(
-          (item) => item.exerciseId === exercise.id,
+      {session.warmup ? (
+        <WarmupCard
+          warmup={session.warmup}
+          onDone={() =>
+            patch({ ...session, warmup: { ...session.warmup!, done: true } }, true)
+          }
+        />
+      ) : null}
+
+      {session.exercises.map((logged, exerciseIndex) => {
+        const exercise = resolveExercise(
+          logged.exerciseId,
+          athlete,
+          logged.sets.length,
         );
-        if (!logged) return null;
+        const fromProgram = day.exercises.some((item) => item.id === exercise.id);
         const prev = previousSets(athlete, session.dayId, exercise.id);
         const load = lastLoad(athlete, exercise.id);
         const howOpen = openHow === exercise.id;
@@ -550,6 +616,7 @@ export function WorkoutSessionView() {
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {exerciseIndex + 1} · {exercise.group}
+                    {fromProgram ? "" : " · added"}
                   </p>
                   <p className="truncate font-medium leading-tight">{exercise.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
@@ -725,6 +792,66 @@ export function WorkoutSessionView() {
           </Card>
         );
       })}
+
+      {session.status !== "completed" ? (
+        <AddExerciseButton
+          athlete={athlete}
+          exclude={session.exercises.map((item) => item.exerciseId)}
+          onPick={(exercise) => {
+            const nextAthlete = pinExercise(athlete, session.dayId, {
+              exerciseId: exercise.id,
+              sets: exercise.sets,
+              reps: exercise.reps,
+            });
+            const prev = previousSets(athlete, session.dayId, exercise.id);
+            const fallback = lastLoad(athlete, exercise.id);
+            persistSession(
+              {
+                ...session,
+                exercises: [
+                  ...session.exercises,
+                  {
+                    exerciseId: exercise.id,
+                    sets: blankSets(exercise.sets).map((set, index) => ({
+                      ...set,
+                      weight: prev[index]?.weight ?? fallback?.weight ?? null,
+                      reps: prev[index]?.reps ?? fallback?.reps ?? null,
+                    })),
+                  },
+                ],
+                updatedAt: new Date().toISOString(),
+              },
+              { athlete: nextAthlete, immediate: true },
+            );
+            setExpanded((current) => ({ ...current, [exercise.id]: true }));
+            toast.success(`${exercise.name} added to this program`);
+          }}
+          onCreate={(custom) => {
+            const nextAthlete = pinExercise(
+              rememberCustom(athlete, custom),
+              session.dayId,
+              {
+                exerciseId: custom.id,
+                sets: custom.sets,
+                reps: custom.reps,
+              },
+            );
+            persistSession(
+              {
+                ...session,
+                exercises: [
+                  ...session.exercises,
+                  { exerciseId: custom.id, sets: blankSets(custom.sets) },
+                ],
+                updatedAt: new Date().toISOString(),
+              },
+              { athlete: nextAthlete, immediate: true },
+            );
+            setExpanded((current) => ({ ...current, [custom.id]: true }));
+            toast.success(`${custom.name} saved. You can search it next time.`);
+          }}
+        />
+      ) : null}
 
       {(counts && counts.completedSets > 0) ||
       session.status === "completed" ||

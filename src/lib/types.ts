@@ -52,6 +52,43 @@ export type ProgramDay = {
   exercises: Exercise[];
 };
 
+export type WarmupKind = "bike" | "run";
+
+export type WarmupStep = {
+  minutes: number;
+  pace: string;
+};
+
+export type WarmupPreset = {
+  id: string;
+  kind: WarmupKind;
+  title: string;
+  detail: string;
+  steps: WarmupStep[];
+};
+
+export type WarmupLog = {
+  kind: WarmupKind;
+  presetId: string;
+  title: string;
+  steps: WarmupStep[];
+  done?: boolean;
+};
+
+export type CustomExercise = {
+  id: string;
+  name: string;
+  group: string;
+  sets: number;
+  reps: string;
+};
+
+export type PinnedExercise = {
+  exerciseId: string;
+  sets: number;
+  reps: string;
+};
+
 export type LoggedSet = {
   weight: number | null;
   reps: number | null;
@@ -91,6 +128,7 @@ export type WorkoutSession = {
   feelingAfter?: FeelingAfter;
   feelingBeforeSaved?: boolean;
   feelingAfterSaved?: boolean;
+  warmup?: WarmupLog;
   exercises: SessionExercise[];
   updatedAt: string;
 };
@@ -135,6 +173,8 @@ export type AthleteDoc = {
   lastByDay: Partial<Record<DayKind, { date: string; sets: LastSets }>>;
   lastLoads?: Record<string, LastLoad>;
   bodyWeight?: BodyWeight[];
+  customExercises?: CustomExercise[];
+  pinnedByDay?: Partial<Record<DayKind, PinnedExercise[]>>;
   prs: Record<string, PersonalRecord>;
   recent: SessionSummary[];
   sessionsCompleted: number;

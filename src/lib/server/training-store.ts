@@ -19,7 +19,9 @@ function isAthlete(value: unknown): value is AthleteDoc {
     Array.isArray(data.recent) &&
     data.recent.length <= 12 &&
     (data.bodyWeight == null ||
-      (Array.isArray(data.bodyWeight) && data.bodyWeight.length <= 80))
+      (Array.isArray(data.bodyWeight) && data.bodyWeight.length <= 80)) &&
+    (data.customExercises == null ||
+      (Array.isArray(data.customExercises) && data.customExercises.length <= 80))
   );
 }
 
