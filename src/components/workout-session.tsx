@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Minus, Plus } from "lucide-react";
+import { Check, ChevronDown, Minus, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";
@@ -47,18 +47,49 @@ function nudge(value: number | null, step: number, fallback: number) {
   return Math.max(0, Number(next.toFixed(1)));
 }
 
+function Stepper({
+  value,
+  unit,
+  onMinus,
+  onPlus,
+}: {
+  value: number | null;
+  unit: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between rounded-lg bg-background px-1 py-1">
+      <button type="button" className="grid size-9 shrink-0 place-items-center" onClick={onMinus}>
+        <Minus className="size-4" />
+      </button>
+      <span className="min-w-0 text-center text-sm font-semibold">
+        {value ?? "—"}
+        <span className="block text-[10px] font-normal text-muted-foreground">{unit}</span>
+      </span>
+      <button type="button" className="grid size-9 shrink-0 place-items-center" onClick={onPlus}>
+        <Plus className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 function SetRow({
   index,
   set,
   previous,
   lastKg,
+  extra,
   onChange,
+  onRemove,
 }: {
   index: number;
   set: LoggedSet;
   previous?: LoggedSet;
   lastKg?: number | null;
+  extra?: boolean;
   onChange: (set: LoggedSet) => void;
+  onRemove?: () => void;
 }) {
   const startWeight = previous?.weight ?? lastKg ?? 20;
   const startReps = previous?.reps ?? 8;
@@ -66,70 +97,61 @@ function SetRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[2rem_1fr_1fr_auto] items-center gap-2 rounded-xl p-2",
-        set.done ? "bg-primary/10" : "bg-secondary/60",
+        "flex min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border p-2.5",
+        set.done
+          ? "border-primary/35 bg-primary/10"
+          : "border-transparent bg-secondary/60",
       )}
     >
-      <span className="text-center text-xs font-medium text-muted-foreground">
-        {index + 1}
-      </span>
-      <div className="flex items-center justify-between rounded-lg bg-background px-1 py-1">
-        <button
-          type="button"
-          className="grid size-9 place-items-center"
-          onClick={() =>
-            onChange({ ...set, weight: nudge(set.weight, -2.5, startWeight) })
-          }
-        >
-          <Minus className="size-4" />
-        </button>
-        <span className="min-w-12 text-center text-sm font-semibold">
-          {set.weight ?? "—"}
-          <span className="block text-[10px] font-normal text-muted-foreground">
-            kg
-          </span>
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="grid size-8 shrink-0 place-items-center text-xs font-medium text-muted-foreground">
+          {index + 1}
         </span>
-        <button
-          type="button"
-          className="grid size-9 place-items-center"
-          onClick={() =>
-            onChange({ ...set, weight: nudge(set.weight, 2.5, startWeight) })
-          }
-        >
-          <Plus className="size-4" />
-        </button>
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+          <Stepper
+            value={set.weight}
+            unit="kg"
+            onMinus={() =>
+              onChange({ ...set, weight: nudge(set.weight, -2.5, startWeight) })
+            }
+            onPlus={() =>
+              onChange({ ...set, weight: nudge(set.weight, 2.5, startWeight) })
+            }
+          />
+          <Stepper
+            value={set.reps}
+            unit="reps"
+            onMinus={() =>
+              onChange({ ...set, reps: nudge(set.reps, -1, startReps) })
+            }
+            onPlus={() =>
+              onChange({ ...set, reps: nudge(set.reps, 1, startReps) })
+            }
+          />
+        </div>
+        {extra && onRemove ? (
+          <button
+            type="button"
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground"
+            aria-label={`Remove extra set ${index + 1}`}
+            onClick={onRemove}
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
       </div>
-      <div className="flex items-center justify-between rounded-lg bg-background px-1 py-1">
-        <button
-          type="button"
-          className="grid size-9 place-items-center"
-          onClick={() =>
-            onChange({ ...set, reps: nudge(set.reps, -1, startReps) })
-          }
-        >
-          <Minus className="size-4" />
-        </button>
-        <span className="min-w-10 text-center text-sm font-semibold">
-          {set.reps ?? "—"}
-          <span className="block text-[10px] font-normal text-muted-foreground">
-            reps
-          </span>
-        </span>
-        <button
-          type="button"
-          className="grid size-9 place-items-center"
-          onClick={() =>
-            onChange({ ...set, reps: nudge(set.reps, 1, startReps) })
-          }
-        >
-          <Plus className="size-4" />
-        </button>
-      </div>
+      {previous?.weight || lastKg || extra ? (
+        <p className="px-1 text-[11px] text-muted-foreground">
+          {extra ? "Extra set · " : ""}
+          {previous?.weight || lastKg
+            ? `Last ${previous?.weight ?? lastKg} kg${previous?.reps ? ` × ${previous.reps}` : ""}`
+            : "Copied from the set above"}
+        </p>
+      ) : null}
       <Button
         type="button"
-        size="sm"
         variant={set.done ? "default" : "outline"}
-        className="h-10 px-3"
+        className="h-11 w-full min-w-0"
         onClick={() =>
           onChange({
             ...set,
@@ -139,14 +161,9 @@ function SetRow({
           })
         }
       >
+        {set.done ? <Check className="size-4" /> : null}
         {set.done ? "Saved" : "Save set"}
       </Button>
-      {previous?.weight || lastKg ? (
-        <p className="col-span-4 px-1 text-[11px] text-muted-foreground">
-          Last time: {previous?.weight ?? lastKg} kg
-          {previous?.reps ? ` × ${previous.reps}` : ""}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -169,7 +186,18 @@ export function WorkoutSessionView() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [cancelOpen, setCancelOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
+  const [justDone, setJustDone] = useState<string | null>(null);
   const afterRef = useRef<HTMLDivElement>(null);
+
+  function celebrateDone(name: string, id: string) {
+    setJustDone(id);
+    toast.success(`${name} done`, {
+      description: "All sets logged. Add another if you still have more in the tank.",
+    });
+    window.setTimeout(() => {
+      setJustDone((current) => (current === id ? null : current));
+    }, 2400);
+  }
 
   const session = todaysSession(todaySession, today);
   const picked = pick ? dayById(pick) : undefined;
@@ -442,8 +470,17 @@ export function WorkoutSessionView() {
           setOpenHow((current) => (current === exercise.id ? null : exercise.id));
         }
 
+        const extraCount = Math.max(0, logged.sets.length - exercise.sets);
+
         return (
-          <Card key={exercise.id}>
+          <Card
+            key={exercise.id}
+            className={cn(
+              "transition-[box-shadow,background-color,ring-color]",
+              done && "bg-primary/[0.06] ring-primary/25",
+              justDone === exercise.id && "ring-2 ring-primary",
+            )}
+          >
             <div className="flex items-center gap-3 px-4 py-3">
               <button
                 type="button"
@@ -466,14 +503,20 @@ export function WorkoutSessionView() {
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {exerciseIndex + 1} · {exercise.group}
-                    {done ? " · done" : ""}
                   </p>
-                  <p className="font-medium leading-tight">{exercise.name}</p>
+                  <p className="truncate font-medium leading-tight">{exercise.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {doneSets}/{exercise.sets} sets
+                    {doneSets}/{logged.sets.length} sets
+                    {extraCount > 0 ? ` · +${extraCount} extra` : ""}
                     {load ? ` · last ${load.weight} kg` : ""}
                   </p>
                 </div>
+                {done ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
+                    <Check className="size-3.5" />
+                    Done
+                  </span>
+                ) : null}
                 <ChevronDown
                   className={cn(
                     "size-4 shrink-0 text-muted-foreground transition-transform",
@@ -500,10 +543,16 @@ export function WorkoutSessionView() {
                       open={howOpen}
                       onToggle={toggleHow}
                     />
-                    {done ? null : (
+                    {done ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
+                        <Check className="size-4" />
+                        Marked done
+                      </span>
+                    ) : (
                       <Button
                         type="button"
                         size="sm"
+                        className="h-8 px-3"
                         onClick={() => {
                           const startWeight = load?.weight ?? prev[0]?.weight ?? 20;
                           const startReps = prev[0]?.reps ?? 8;
@@ -522,6 +571,7 @@ export function WorkoutSessionView() {
                               : item,
                           );
                           patch({ ...session, exercises }, true);
+                          celebrateDone(exercise.name, exercise.id);
                           setExpanded((current) => ({
                             ...current,
                             [exercise.id]: false,
@@ -539,8 +589,25 @@ export function WorkoutSessionView() {
                     key={`${exercise.id}-${index}`}
                     index={index}
                     set={set}
-                    previous={prev[index]}
+                    previous={prev[index] ?? (index > 0 ? logged.sets[index - 1] : undefined)}
                     lastKg={load?.weight}
+                    extra={index >= exercise.sets}
+                    onRemove={
+                      index >= exercise.sets
+                        ? () => {
+                            const exercises = session.exercises.map((item) => {
+                              if (item.exerciseId !== exercise.id) return item;
+                              const sets = item.sets.filter((_, setIndex) => setIndex !== index);
+                              return {
+                                ...item,
+                                sets,
+                                done: sets.length > 0 && sets.every((entry) => entry.done),
+                              };
+                            });
+                            patch({ ...session, exercises }, true);
+                          }
+                        : undefined
+                    }
                     onChange={(nextSet) => {
                       const exercises = session.exercises.map((item) => {
                         if (item.exerciseId !== exercise.id) return item;
@@ -550,12 +617,13 @@ export function WorkoutSessionView() {
                         const allDone = sets.every((entry) => entry.done);
                         return { ...item, sets, done: allDone };
                       });
-                      patch({ ...session, exercises }, nextSet.done);
-                      if (
-                        nextSet.done &&
+                      const nowDone = Boolean(
                         exercises.find((item) => item.exerciseId === exercise.id)
-                          ?.done
-                      ) {
+                          ?.done,
+                      );
+                      patch({ ...session, exercises }, nextSet.done);
+                      if (nextSet.done && nowDone && !done) {
+                        celebrateDone(exercise.name, exercise.id);
                         setExpanded((current) => ({
                           ...current,
                           [exercise.id]: false,
@@ -564,6 +632,47 @@ export function WorkoutSessionView() {
                     }}
                   />
                 ))}
+                {session.status !== "completed" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full min-w-0"
+                    onClick={() => {
+                      if (logged.sets.length >= exercise.sets + 8) {
+                        toast.message("That's enough extra sets for this lift.");
+                        return;
+                      }
+                      const last = logged.sets[logged.sets.length - 1];
+                      const startWeight =
+                        last?.weight ?? load?.weight ?? prev[0]?.weight ?? 20;
+                      const startReps = last?.reps ?? prev[0]?.reps ?? 8;
+                      const exercises = session.exercises.map((item) =>
+                        item.exerciseId === exercise.id
+                          ? {
+                              ...item,
+                              done: false,
+                              sets: [
+                                ...item.sets,
+                                {
+                                  weight: startWeight,
+                                  reps: startReps,
+                                  done: false,
+                                },
+                              ],
+                            }
+                          : item,
+                      );
+                      patch({ ...session, exercises });
+                      setExpanded((current) => ({
+                        ...current,
+                        [exercise.id]: true,
+                      }));
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    Add a set
+                  </Button>
+                ) : null}
               </CardContent>
             ) : null}
           </Card>
