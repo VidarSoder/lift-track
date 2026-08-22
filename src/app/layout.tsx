@@ -48,10 +48,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
     >
-      <body className="min-h-full bg-background font-sans text-foreground">
+      <body className="bg-background font-sans text-foreground">
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var n=window.navigator;if(n.standalone||window.matchMedia("(display-mode:standalone)").matches||window.matchMedia("(display-mode:fullscreen)").matches){document.documentElement.classList.add("is-standalone")}}catch(e){}})();`,
+            __html: `(function(){try{var n=window.navigator;if(n.standalone||window.matchMedia("(display-mode:standalone)").matches||window.matchMedia("(display-mode:fullscreen)").matches){var r=document.documentElement;r.classList.add("is-standalone");r.style.setProperty("--app-height","100vh")}}catch(e){}})();`,
           }}
         />
         <Providers>{children}</Providers>
