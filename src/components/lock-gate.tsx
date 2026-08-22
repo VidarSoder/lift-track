@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BOOKMARK_HINT, PROGRAM_NAME } from "@/data/program";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +18,12 @@ export function LockGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
+      <PullToRefresh
+        onRefresh={async () => window.location.reload()}
+        className="flex min-h-dvh items-center justify-center bg-background px-5 text-sm text-muted-foreground"
+      >
         Loading the week…
-      </div>
+      </PullToRefresh>
     );
   }
 
@@ -38,7 +42,10 @@ export function LockGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col justify-center overflow-y-auto px-5">
+    <PullToRefresh
+      onRefresh={async () => window.location.reload()}
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5"
+    >
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary">
         Vidar · training
       </p>
@@ -78,6 +85,6 @@ export function LockGate({ children }: { children: React.ReactNode }) {
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         {BOOKMARK_HINT}
       </p>
-    </div>
+    </PullToRefresh>
   );
 }

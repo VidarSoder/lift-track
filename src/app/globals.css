@@ -145,6 +145,13 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.app-scroll {
+  overflow-y: scroll;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 html.is-standalone,
 html.is-standalone body {
   height: var(--app-height, 100vh);

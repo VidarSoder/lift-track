@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,18 +10,26 @@ export function PullToRefresh({
   onRefresh,
   children,
   className,
+  resetKey,
 }: {
   onRefresh: () => Promise<void>;
   children: ReactNode;
   className?: string;
+  resetKey?: string;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const indicator = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const pulling = useRef(false);
   const pull = useRef(0);
-  const [busy, setBusy] = useState(false);
+  const busy = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const [spinning, setSpinning] = useState(false);
   const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
 
   function paint(distance: number) {
     pull.current = distance;
@@ -36,67 +44,85 @@ export function PullToRefresh({
     }
   }
 
-  function onTouchStart(event: TouchEvent<HTMLDivElement>) {
-    if (busy) return;
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [resetKey]);
+
+  useEffect(() => {
     const node = scroller.current;
-    if (!node || node.scrollTop > 1) {
+    if (!node) return;
+
+    const atTop = () => node.scrollTop <= 1;
+
+    const onStart = (event: TouchEvent) => {
+      if (busy.current) return;
+      if (!atTop()) {
+        pulling.current = false;
+        return;
+      }
+      pulling.current = true;
+      startY.current = event.touches[0]?.clientY ?? 0;
+    };
+
+    const onMove = (event: TouchEvent) => {
+      if (!pulling.current || busy.current) return;
+      if (!atTop()) {
+        paint(0);
+        setArmed(false);
+        pulling.current = false;
+        return;
+      }
+      const y = event.touches[0]?.clientY ?? 0;
+      const delta = y - startY.current;
+      if (delta <= 0) {
+        paint(0);
+        setArmed(false);
+        return;
+      }
+      event.preventDefault();
+      const distance = Math.min(96, delta * 0.38);
+      paint(distance);
+      setArmed(distance >= THRESHOLD);
+    };
+
+    const onEnd = async () => {
+      if (!pulling.current) return;
       pulling.current = false;
-      return;
-    }
-    pulling.current = true;
-    startY.current = event.touches[0]?.clientY ?? 0;
-  }
+      const shouldRefresh = pull.current >= THRESHOLD && !busy.current;
+      if (!shouldRefresh) {
+        paint(0);
+        setArmed(false);
+        return;
+      }
+      busy.current = true;
+      setSpinning(true);
+      paint(THRESHOLD);
+      try {
+        await onRefreshRef.current();
+      } finally {
+        busy.current = false;
+        setSpinning(false);
+        setArmed(false);
+        paint(0);
+      }
+    };
 
-  function onTouchMove(event: TouchEvent<HTMLDivElement>) {
-    if (!pulling.current || busy) return;
-    const node = scroller.current;
-    if (!node || node.scrollTop > 1) {
-      paint(0);
-      setArmed(false);
-      return;
-    }
-    const y = event.touches[0]?.clientY ?? 0;
-    const delta = y - startY.current;
-    if (delta <= 0) {
-      paint(0);
-      setArmed(false);
-      return;
-    }
-    const distance = Math.min(96, delta * 0.38);
-    paint(distance);
-    setArmed(distance >= THRESHOLD);
-  }
-
-  async function onTouchEnd() {
-    if (!pulling.current) return;
-    pulling.current = false;
-    const shouldRefresh = pull.current >= THRESHOLD && !busy;
-    if (!shouldRefresh) {
-      paint(0);
-      setArmed(false);
-      return;
-    }
-    setBusy(true);
-    paint(THRESHOLD);
-    try {
-      await onRefresh();
-    } finally {
-      setBusy(false);
-      setArmed(false);
-      paint(0);
-    }
-  }
+    node.addEventListener("touchstart", onStart, { passive: true });
+    node.addEventListener("touchmove", onMove, { passive: false });
+    node.addEventListener("touchend", onEnd);
+    node.addEventListener("touchcancel", onEnd);
+    return () => {
+      node.removeEventListener("touchstart", onStart);
+      node.removeEventListener("touchmove", onMove);
+      node.removeEventListener("touchend", onEnd);
+      node.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
 
   return (
     <div
       ref={scroller}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      className={cn(
-        "relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain",
-        className,
-      )}
+      className={cn("app-scroll relative flex min-h-0 flex-1 flex-col", className)}
     >
       <div
         ref={indicator}
@@ -107,7 +133,7 @@ export function PullToRefresh({
           data-disc
           className="mb-1 grid size-8 place-items-center rounded-full border border-border/70 bg-card shadow-sm"
         >
-          {busy ? (
+          {spinning ? (
             <LoaderCircle className="size-4 animate-spin text-primary" />
           ) : (
             <ArrowDown

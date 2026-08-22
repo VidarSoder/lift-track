@@ -25,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell mx-auto flex w-full max-w-md flex-col overflow-hidden bg-background">
       <PullToRefresh
         onRefresh={reload}
+        resetKey={pathname}
         className="px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4"
       >
         {children}
