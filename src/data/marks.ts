@@ -176,6 +176,12 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "farmer-carry": { icon: Briefcase, tone: TONES.rust },
   "zone2-walk": { icon: Route, tone: TONES.moss },
   "arm-care": { icon: HeartPulse, tone: TONES.clay },
+  "bike-easy-8": { icon: Bike, tone: TONES.sage },
+  "bike-ramp-10": { icon: Bike, tone: TONES.pine },
+  "bike-hard-then-easy": { icon: Bike, tone: TONES.moss },
+  "run-7-then-4": { icon: Footprints, tone: TONES.sand },
+  "run-easy-8": { icon: Footprints, tone: TONES.copper },
+  "run-walk-jog": { icon: Footprints, tone: TONES.clay },
 };
 
 export const WORKOUT_MARKS: Record<string, Mark> = {
@@ -185,6 +191,7 @@ export const WORKOUT_MARKS: Record<string, Mark> = {
   arms: { icon: Activity, tone: TONES.copper },
   shoulders: { icon: Sun, tone: TONES.sand },
   optional: { icon: Leaf, tone: TONES.pine },
+  warmup: { icon: Bike, tone: TONES.sage },
   rest: { icon: Snowflake, tone: TONES.stone },
 };
 

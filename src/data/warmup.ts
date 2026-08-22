@@ -74,3 +74,18 @@ export function warmupMinutes(preset: WarmupPreset) {
 export function warmupLabel(kind: WarmupKind) {
   return kind === "bike" ? "Bike" : "Run";
 }
+
+export function firstNumber(value: string) {
+  const match = value.match(/(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : null;
+}
+
+export function cardioUnits(group: string) {
+  if (group === "Run") {
+    return { load: "km/h", work: "min", loadStep: 0.5, workStep: 1, fallbackLoad: 7 };
+  }
+  if (group === "Bike") {
+    return { load: "lvl", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 5 };
+  }
+  return { load: "kg", work: "reps", loadStep: 2.5, workStep: 1, fallbackLoad: 20 };
+}

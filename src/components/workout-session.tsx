@@ -18,8 +18,9 @@ import {
   previousSets,
   sessionSetCounts,
 } from "@/lib/session";
+import { cardioUnits, firstNumber, warmupById } from "@/data/warmup";
 import { pinExercise, rememberCustom, resolveExercise } from "@/lib/exercises";
-import type { LoggedSet, TimeOfDay, WarmupLog, WorkoutSession } from "@/lib/types";
+import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
   ExerciseHowButton,
   ExerciseHowPanel,
@@ -27,7 +28,7 @@ import {
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
-import { WarmupCard, WarmupPicker, warmupFromPreset } from "@/components/warmup-picker";
+import { WarmupCard } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
@@ -84,6 +85,7 @@ function SetRow({
   previous,
   lastKg,
   extra,
+  units = cardioUnits(""),
   onChange,
   onRemove,
 }: {
@@ -92,11 +94,12 @@ function SetRow({
   previous?: LoggedSet;
   lastKg?: number | null;
   extra?: boolean;
+  units?: ReturnType<typeof cardioUnits>;
   onChange: (set: LoggedSet) => void;
   onRemove?: () => void;
 }) {
-  const startWeight = previous?.weight ?? lastKg ?? 20;
-  const startReps = previous?.reps ?? 8;
+  const startWeight = previous?.weight ?? lastKg ?? units.fallbackLoad;
+  const startReps = previous?.reps ?? (units.work === "min" ? 6 : 8);
   const [confirmClear, setConfirmClear] = useState(false);
   const confirmTimer = useRef<number | null>(null);
 
@@ -136,26 +139,38 @@ function SetRow({
         <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
           <Stepper
             value={set.weight}
-            unit="kg"
+            unit={units.load}
             onMinus={() => {
               cancelClear();
-              onChange({ ...set, weight: nudge(set.weight, -2.5, startWeight) });
+              onChange({
+                ...set,
+                weight: nudge(set.weight, -units.loadStep, startWeight),
+              });
             }}
             onPlus={() => {
               cancelClear();
-              onChange({ ...set, weight: nudge(set.weight, 2.5, startWeight) });
+              onChange({
+                ...set,
+                weight: nudge(set.weight, units.loadStep, startWeight),
+              });
             }}
           />
           <Stepper
             value={set.reps}
-            unit="reps"
+            unit={units.work}
             onMinus={() => {
               cancelClear();
-              onChange({ ...set, reps: nudge(set.reps, -1, startReps) });
+              onChange({
+                ...set,
+                reps: nudge(set.reps, -units.workStep, startReps),
+              });
             }}
             onPlus={() => {
               cancelClear();
-              onChange({ ...set, reps: nudge(set.reps, 1, startReps) });
+              onChange({
+                ...set,
+                reps: nudge(set.reps, units.workStep, startReps),
+              });
             }}
           />
         </div>
@@ -174,7 +189,7 @@ function SetRow({
         <p className="px-1 text-[11px] text-muted-foreground">
           {extra ? "Extra set · " : ""}
           {previous?.weight || lastKg
-            ? `Last ${previous?.weight ?? lastKg} kg${previous?.reps ? ` × ${previous.reps}` : ""}`
+            ? `Last ${previous?.weight ?? lastKg} ${units.load}${previous?.reps ? ` × ${previous.reps} ${units.work}` : ""}`
             : "Copied from the set above"}
         </p>
       ) : null}
@@ -229,9 +244,6 @@ export function WorkoutSessionView() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
-  const [pickedWarmup, setPickedWarmup] = useState<WarmupLog | undefined>(() =>
-    warmupFromPreset("run-7-then-4"),
-  );
   const afterRef = useRef<HTMLDivElement>(null);
 
   function celebrateDone(name: string, id: string) {
@@ -257,10 +269,20 @@ export function WorkoutSessionView() {
     const nextDay = dayById(id);
     if (!nextDay) return;
     const extras = athlete.pinnedByDay?.[nextDay.id] ?? [];
-    const next = createSession(nextDay, today, extras, pickedWarmup);
+    const next = createSession(nextDay, today, extras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
       const fallback = lastLoad(athlete, exercise.exerciseId);
+      const preset = warmupById(exercise.exerciseId);
+      if (preset) {
+        exercise.sets = preset.steps.map((step, index) => ({
+          weight:
+            prev[index]?.weight ?? fallback?.weight ?? firstNumber(step.pace),
+          reps: prev[index]?.reps ?? step.minutes,
+          done: false,
+        }));
+        continue;
+      }
       exercise.sets = exercise.sets.map((set, index) => ({
         ...set,
         weight: prev[index]?.weight ?? fallback?.weight ?? null,
@@ -321,10 +343,10 @@ export function WorkoutSessionView() {
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
             </header>
             <p className="text-sm leading-6 text-muted-foreground">
-              Still photos and last kg on the list. Tap a row for the GIF on this
-              page, then Back.
+              {day.id === "warmup"
+                ? "This is its own session. Do a run or bike version, add extras if you want, then start a lift later the same day."
+                : "Still photos and last kg on the list. Tap a row for the GIF on this page, then Back."}
             </p>
-            <WarmupPicker value={pickedWarmup} onChange={setPickedWarmup} />
             <WorkoutExercisePreview
               exercises={[
                 ...day.exercises,
@@ -584,6 +606,7 @@ export function WorkoutSessionView() {
         }
 
         const extraCount = Math.max(0, logged.sets.length - exercise.sets);
+        const units = cardioUnits(exercise.group);
 
         return (
           <Card
@@ -622,7 +645,7 @@ export function WorkoutSessionView() {
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {doneSets}/{logged.sets.length} sets
                     {extraCount > 0 ? ` · +${extraCount} extra` : ""}
-                    {load ? ` · last ${load.weight} kg` : ""}
+                    {load ? ` · last ${load.weight} ${units.load}` : ""}
                   </p>
                 </div>
                 {done ? (
@@ -706,6 +729,7 @@ export function WorkoutSessionView() {
                     previous={prev[index] ?? (index > 0 ? logged.sets[index - 1] : undefined)}
                     lastKg={load?.weight}
                     extra={index >= exercise.sets}
+                    units={units}
                     onRemove={
                       index >= exercise.sets
                         ? () => {
@@ -1018,9 +1042,17 @@ export function WorkoutSessionView() {
           </p>
         </div>
       ) : (
-        <p className="text-center text-sm text-muted-foreground">
-          Saved. Those loads come back the next time you run this workout.
-        </p>
+        <div className="space-y-3">
+          <p className="text-center text-sm text-muted-foreground">
+            Saved. Those loads come back the next time you run this workout.
+          </p>
+          <Link
+            href="/"
+            className="flex h-12 w-full items-center justify-center rounded-xl bg-secondary text-sm font-medium"
+          >
+            Start another session
+          </Link>
+        </div>
       )}
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>

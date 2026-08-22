@@ -1,3 +1,4 @@
+import { WARMUP_PRESETS } from "@/data/warmup";
 import type { Exercise, ProgramDay, Weekday } from "@/lib/types";
 
 export const ATHLETE_NAME = "Vidar";
@@ -692,6 +693,30 @@ export const DAYS: ProgramDay[] = [
     ],
   },
   {
+    id: "warmup",
+    weekday: "sunday",
+    title: "Warm-up · run or bike",
+    source: "Easy start, any day",
+    focus: "Pick a treadmill or bike version. Do one, or a few, then lift later if you want.",
+    durationMin: "8–12",
+    warmup: [],
+    coaching:
+      "This is its own session. Finish it and you can still start Push, Arms, or whatever else the same day. Keep it easy enough that the first working set still feels sharp.",
+    exercises: WARMUP_PRESETS.map((preset) => ({
+      id: preset.id,
+      name: `${preset.kind === "run" ? "Run" : "Bike"} · ${preset.title}`,
+      group: preset.kind === "run" ? "Run" : "Bike",
+      sets: preset.steps.length,
+      reps: preset.steps.map((step) => `${step.minutes} min`).join(" + "),
+      restSec: 0,
+      equipment: preset.kind === "run" ? "Treadmill" : "Exercise bike",
+      setup: preset.detail,
+      how: preset.steps.map((step) => `${step.minutes} min at ${step.pace}`).join(". Then "),
+      mistakes: "Turning the warm-up into the workout.",
+      progress: "Same pace is fine. Add a minute before you add speed.",
+    })),
+  },
+  {
     id: "rest",
     weekday: "sunday",
     title: "Rest · eat and sleep",
@@ -727,6 +752,7 @@ export function uniqueExercises() {
   const seen = new Set<string>();
   const list: Exercise[] = [];
   for (const day of DAYS) {
+    if (day.id === "warmup" || day.id === "rest") continue;
     for (const exercise of day.exercises) {
       if (seen.has(exercise.id)) continue;
       seen.add(exercise.id);

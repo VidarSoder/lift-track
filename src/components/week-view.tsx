@@ -17,7 +17,7 @@ type Filter = "all" | string;
 
 export function WeekView() {
   const { todaySession } = useTraining();
-  const workouts = workoutCatalog();
+  const workouts = workoutCatalog().filter((workout) => workout.id !== "warmup");
   const [filter, setFilter] = useState<Filter>("all");
   const groups = useMemo(() => exercisesByMuscle(), []);
   const selected = workouts.find((workout) => workout.id === filter);

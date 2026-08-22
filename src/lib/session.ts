@@ -10,7 +10,6 @@ import type {
   ProgramDay,
   SessionExercise,
   SessionSummary,
-  WarmupLog,
   WorkoutSession,
 } from "@/lib/types";
 
@@ -34,7 +33,6 @@ export function createSession(
   day: ProgramDay,
   date = formatDateISO(),
   extras: PinnedExercise[] = [],
-  warmup?: WarmupLog,
 ): WorkoutSession {
   const seen = new Set(day.exercises.map((exercise) => exercise.id));
   const extraLifts = extras.filter((item) => !seen.has(item.exerciseId));
@@ -46,7 +44,6 @@ export function createSession(
     startedAt: new Date().toISOString(),
     timeOfDay: currentTimeOfDay(),
     feelingBefore: emptyFeeling(),
-    warmup,
     exercises: [
       ...day.exercises.map((exercise) => ({
         exerciseId: exercise.id,
@@ -199,24 +196,33 @@ export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {
   const prs: Record<string, PersonalRecord> = { ...athlete.prs };
-  for (const exercise of session.exercises) {
-    for (const set of exercise.sets) {
-      if (!set.done || !set.weight || !set.reps) continue;
-      const current = prs[exercise.exerciseId];
-      if (!current || set.weight > current.weight) {
-        prs[exercise.exerciseId] = {
-          weight: set.weight,
-          reps: set.reps,
-          date: session.date,
-        };
+  if (session.dayId !== "warmup") {
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        if (!set.done || !set.weight || !set.reps) continue;
+        const current = prs[exercise.exerciseId];
+        if (!current || set.weight > current.weight) {
+          prs[exercise.exerciseId] = {
+            weight: set.weight,
+            reps: set.reps,
+            date: session.date,
+          };
+        }
       }
     }
   }
 
   const summary = summarizeSession(session);
-  const recent = [summary, ...athlete.recent.filter((item) => item.date !== session.date)]
-    .slice(0, 12);
+  const recent = [
+    summary,
+    ...athlete.recent.filter(
+      (item) => !(item.date === session.date && item.dayId === session.dayId),
+    ),
+  ].slice(0, 12);
 
+  const alreadyToday = athlete.recent.some(
+    (item) => item.date === session.date && item.dayId === session.dayId,
+  );
   const lastDate = athlete.lastSessionDate;
   const streak =
     session.status === "completed"
@@ -242,7 +248,7 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
     prs,
     recent,
     sessionsCompleted:
-      session.status === "completed" && lastDate !== session.date
+      session.status === "completed" && !alreadyToday
         ? athlete.sessionsCompleted + 1
         : athlete.sessionsCompleted,
     streak,

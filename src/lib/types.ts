@@ -14,6 +14,7 @@ export type DayKind =
   | "arms"
   | "shoulders"
   | "optional"
+  | "warmup"
   | "rest";
 
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "night";
