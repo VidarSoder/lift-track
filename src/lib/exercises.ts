@@ -1,11 +1,5 @@
 import { uniqueExercises } from "@/data/program";
-import type {
-  AthleteDoc,
-  CustomExercise,
-  DayKind,
-  Exercise,
-  PinnedExercise,
-} from "@/lib/types";
+import type { AthleteDoc, CustomExercise, Exercise } from "@/lib/types";
 
 function customToExercise(custom: CustomExercise): Exercise {
   return {
@@ -88,29 +82,3 @@ export function rememberCustom(athlete: AthleteDoc, custom: CustomExercise): Ath
   };
 }
 
-export function pinExercise(
-  athlete: AthleteDoc,
-  dayId: DayKind,
-  pin: PinnedExercise,
-): AthleteDoc {
-  const current = athlete.pinnedByDay?.[dayId] ?? [];
-  if (current.some((item) => item.exerciseId === pin.exerciseId)) return athlete;
-  return {
-    ...athlete,
-    pinnedByDay: {
-      ...athlete.pinnedByDay,
-      [dayId]: [...current, pin].slice(0, 24),
-    },
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-export function isPinnedExtra(
-  athlete: AthleteDoc,
-  dayId: DayKind,
-  exerciseId: string,
-) {
-  return Boolean(
-    athlete.pinnedByDay?.[dayId]?.some((item) => item.exerciseId === exerciseId),
-  );
-}

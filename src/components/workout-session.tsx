@@ -19,8 +19,8 @@ import {
   sessionSetCounts,
 } from "@/lib/session";
 import { cardioUnits, firstNumber, warmupById } from "@/data/warmup";
-import { pinExercise, rememberCustom, resolveExercise } from "@/lib/exercises";
-import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
+import { rememberCustom, resolveExercise } from "@/lib/exercises";
+import type { LoggedSet, PinnedExercise, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
   ExerciseHowButton,
   ExerciseHowPanel,
@@ -244,6 +244,7 @@ export function WorkoutSessionView() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
+  const [pendingExtras, setPendingExtras] = useState<PinnedExercise[]>([]);
   const afterRef = useRef<HTMLDivElement>(null);
 
   function celebrateDone(name: string, id: string) {
@@ -268,8 +269,7 @@ export function WorkoutSessionView() {
   function startWorkout(id: string) {
     const nextDay = dayById(id);
     if (!nextDay) return;
-    const extras = athlete.pinnedByDay?.[nextDay.id] ?? [];
-    const next = createSession(nextDay, today, extras);
+    const next = createSession(nextDay, today, pendingExtras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
       const fallback = lastLoad(athlete, exercise.exerciseId);
@@ -350,14 +350,9 @@ export function WorkoutSessionView() {
             <WorkoutExercisePreview
               exercises={[
                 ...day.exercises,
-                ...(athlete.pinnedByDay?.[day.id] ?? [])
-                  .filter(
-                    (item) =>
-                      !day.exercises.some((exercise) => exercise.id === item.exerciseId),
-                  )
-                  .map((item) =>
-                    resolveExercise(item.exerciseId, athlete, item.sets),
-                  ),
+                ...pendingExtras.map((item) =>
+                  resolveExercise(item.exerciseId, athlete, item.sets),
+                ),
               ]}
             />
             {locked ? null : (
@@ -365,31 +360,30 @@ export function WorkoutSessionView() {
                 athlete={athlete}
                 exclude={[
                   ...day.exercises.map((exercise) => exercise.id),
-                  ...(athlete.pinnedByDay?.[day.id] ?? []).map(
-                    (item) => item.exerciseId,
-                  ),
+                  ...pendingExtras.map((item) => item.exerciseId),
                 ]}
                 onPick={(exercise) => {
-                  setAthlete(
-                    pinExercise(athlete, day.id, {
+                  setPendingExtras((current) => [
+                    ...current,
+                    {
                       exerciseId: exercise.id,
                       sets: exercise.sets,
                       reps: exercise.reps,
-                    }),
-                    { immediate: true },
-                  );
-                  toast.success(`${exercise.name} added to this program`);
+                    },
+                  ]);
+                  toast.success(`${exercise.name} added to this session`);
                 }}
                 onCreate={(custom) => {
-                  setAthlete(
-                    pinExercise(rememberCustom(athlete, custom), day.id, {
+                  setAthlete(rememberCustom(athlete, custom), { immediate: true });
+                  setPendingExtras((current) => [
+                    ...current,
+                    {
                       exerciseId: custom.id,
                       sets: custom.sets,
                       reps: custom.reps,
-                    }),
-                    { immediate: true },
-                  );
-                  toast.success(`${custom.name} saved on this program`);
+                    },
+                  ]);
+                  toast.success(`${custom.name} saved. Search it next time.`);
                 }}
               />
             )}
@@ -822,11 +816,6 @@ export function WorkoutSessionView() {
           athlete={athlete}
           exclude={session.exercises.map((item) => item.exerciseId)}
           onPick={(exercise) => {
-            const nextAthlete = pinExercise(athlete, session.dayId, {
-              exerciseId: exercise.id,
-              sets: exercise.sets,
-              reps: exercise.reps,
-            });
             const prev = previousSets(athlete, session.dayId, exercise.id);
             const fallback = lastLoad(athlete, exercise.id);
             persistSession(
@@ -845,21 +834,12 @@ export function WorkoutSessionView() {
                 ],
                 updatedAt: new Date().toISOString(),
               },
-              { athlete: nextAthlete, immediate: true },
+              { immediate: true },
             );
             setExpanded((current) => ({ ...current, [exercise.id]: true }));
-            toast.success(`${exercise.name} added to this program`);
+            toast.success(`${exercise.name} added to this session`);
           }}
           onCreate={(custom) => {
-            const nextAthlete = pinExercise(
-              rememberCustom(athlete, custom),
-              session.dayId,
-              {
-                exerciseId: custom.id,
-                sets: custom.sets,
-                reps: custom.reps,
-              },
-            );
             persistSession(
               {
                 ...session,
@@ -869,10 +849,13 @@ export function WorkoutSessionView() {
                 ],
                 updatedAt: new Date().toISOString(),
               },
-              { athlete: nextAthlete, immediate: true },
+              {
+                athlete: rememberCustom(athlete, custom),
+                immediate: true,
+              },
             );
             setExpanded((current) => ({ ...current, [custom.id]: true }));
-            toast.success(`${custom.name} saved. You can search it next time.`);
+            toast.success(`${custom.name} saved. Search it next time.`);
           }}
         />
       ) : null}

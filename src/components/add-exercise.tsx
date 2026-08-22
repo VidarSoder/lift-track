@@ -96,8 +96,8 @@ export function AddExerciseButton({
           <DialogHeader>
             <DialogTitle>Add a lift</DialogTitle>
             <DialogDescription>
-              Search the book first. If nothing matches, save your own — it
-              stays on this program only.
+              Search the book or a lift you saved. Custom ones stay searchable
+              so we can add them to the real program later.
             </DialogDescription>
           </DialogHeader>
           <Input
