@@ -231,9 +231,10 @@ export function WorkoutSessionView() {
     );
   }
 
-  function isExpanded(id: string, done: boolean) {
+  function isExpanded(id: string, done: boolean, isFirst: boolean) {
     if (id in expanded) return expanded[id];
-    return !done;
+    if (done) return false;
+    return isFirst;
   }
 
   function finishSession(current = session) {
@@ -464,7 +465,7 @@ export function WorkoutSessionView() {
         const load = lastLoad(athlete, exercise.id);
         const howOpen = openHow === exercise.id;
         const done = liftIsDone(logged);
-        const open = isExpanded(exercise.id, done);
+        const open = isExpanded(exercise.id, done, exerciseIndex === 0);
         const doneSets = logged.sets.filter((set) => set.done).length;
         function toggleHow() {
           setOpenHow((current) => (current === exercise.id ? null : exercise.id));

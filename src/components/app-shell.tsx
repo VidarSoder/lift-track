@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <ActiveSessionFab />
       </Suspense>
-      <nav className="app-nav shrink-0 border-t border-border/80 bg-background px-2 pt-1.5">
+      <nav className="app-nav mt-auto shrink-0 border-t border-border/80 bg-background px-2 pt-1.5">
         <ul className="grid grid-cols-5 gap-1">
           {LINKS.map((link) => {
             const active =

@@ -3,6 +3,7 @@
   "short_name": "Training",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "background_color": "#1a1612",
   "theme_color": "#1a1612",
   "icons": [
