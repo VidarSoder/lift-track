@@ -18,12 +18,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
-      <main className="flex-1 px-4 pb-36 pt-6">{children}</main>
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-hidden bg-background">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-5">
+        {children}
+      </main>
       <Suspense fallback={null}>
         <ActiveSessionFab />
       </Suspense>
-      <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-border/80 bg-background/90 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md">
+      <nav className="shrink-0 border-t border-border/80 bg-background px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
         <ul className="grid grid-cols-4 gap-1">
           {LINKS.map((link) => {
             const active =

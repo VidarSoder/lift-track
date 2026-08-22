@@ -6,7 +6,7 @@ import { exercisesByMuscle } from "@/data/program";
 import { formatDateISO } from "@/lib/dates";
 import { isOpenSession } from "@/lib/active-session";
 import { workoutCatalog } from "@/lib/suggest";
-import { ExercisePreviewCard } from "@/components/exercise-guide";
+import { ExerciseBook, ExerciseList } from "@/components/exercise-guide";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +33,8 @@ export function WeekView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Every lift</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Scan the list, tap a card for video and photos. You can do this before
-          you start, and again in the middle of a session.
+          Photo and last weight on the list. Tap a row for the GIF on this page,
+          then Back.
         </p>
       </header>
 
@@ -82,8 +82,7 @@ export function WeekView() {
             </Link>
           ) : active ? (
             <p className="rounded-xl bg-secondary/70 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              Preview only. Your session stays open — use the button at the
-              bottom to return.
+              Preview only. Use Back to session under the list.
             </p>
           ) : (
             <Link
@@ -96,27 +95,10 @@ export function WeekView() {
               Preview, then start
             </Link>
           )}
-          {selected.exercises.map((exercise) => (
-            <ExercisePreviewCard key={exercise.id} exercise={exercise} />
-          ))}
+          <ExerciseList exercises={selected.exercises} />
         </div>
       ) : (
-        <div className="space-y-6">
-          {groups.map((group) => (
-            <section key={group.group} className="space-y-2">
-              <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                {group.group}
-              </h2>
-              {group.exercises.map((exercise) => (
-                <ExercisePreviewCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  compact
-                />
-              ))}
-            </section>
-          ))}
-        </div>
+        <ExerciseBook groups={groups} />
       )}
     </div>
   );
@@ -144,7 +126,9 @@ function FilterChip({
           : "bg-secondary text-secondary-foreground",
       )}
     >
-      {id ? <ExerciseMark id={id} size="sm" className={active ? "bg-black/15" : undefined} /> : null}
+      {id ? (
+        <ExerciseMark id={id} size="sm" className={active ? "bg-black/15" : undefined} />
+      ) : null}
       {label}
     </button>
   );

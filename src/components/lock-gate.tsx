@@ -17,7 +17,7 @@ export function LockGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
+      <div className="flex h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
         Loading the week…
       </div>
     );
@@ -38,7 +38,7 @@ export function LockGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col justify-center overflow-y-auto px-5">
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary">
         Vidar · training
       </p>

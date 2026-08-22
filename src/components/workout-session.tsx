@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
@@ -10,11 +11,16 @@ import { workoutCatalog } from "@/lib/suggest";
 import {
   createSession,
   emptyAfter,
+  lastLoad,
   previousSets,
   sessionSetCounts,
 } from "@/lib/session";
 import type { LoggedSet, TimeOfDay, WorkoutSession } from "@/lib/types";
-import { ExerciseHowButton, WorkoutExercisePreview } from "@/components/exercise-guide";
+import {
+  ExerciseHowButton,
+  ExerciseHowPanel,
+  WorkoutExercisePreview,
+} from "@/components/exercise-guide";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { ScoreRow } from "@/components/score-row";
@@ -35,14 +41,16 @@ function SetRow({
   index,
   set,
   previous,
+  lastKg,
   onChange,
 }: {
   index: number;
   set: LoggedSet;
   previous?: LoggedSet;
+  lastKg?: number | null;
   onChange: (set: LoggedSet) => void;
 }) {
-  const startWeight = previous?.weight ?? 20;
+  const startWeight = previous?.weight ?? lastKg ?? 20;
   const startReps = previous?.reps ?? 8;
 
   return (
@@ -123,9 +131,10 @@ function SetRow({
       >
         {set.done ? "Done" : "Log"}
       </Button>
-      {previous?.weight ? (
+      {previous?.weight || lastKg ? (
         <p className="col-span-4 px-1 text-[11px] text-muted-foreground">
-          Last time: {previous.weight} kg × {previous.reps ?? "?"}
+          Last time: {previous?.weight ?? lastKg} kg
+          {previous?.reps ? ` × ${previous.reps}` : ""}
         </p>
       ) : null}
     </div>
@@ -137,6 +146,7 @@ export function WorkoutSessionView() {
     useTraining();
   const today = formatDateISO();
   const pick = useSearchParams().get("pick");
+  const [openHow, setOpenHow] = useState<string | null>(null);
 
   const session = isOpenSession(todaySession, today)
     ? todaySession
@@ -157,10 +167,11 @@ export function WorkoutSessionView() {
     const next = createSession(nextDay, today);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
+      const fallback = lastLoad(athlete, exercise.exerciseId);
       exercise.sets = exercise.sets.map((set, index) => ({
         ...set,
-        weight: prev[index]?.weight ?? null,
-        reps: prev[index]?.reps ?? null,
+        weight: prev[index]?.weight ?? fallback?.weight ?? null,
+        reps: prev[index]?.reps ?? fallback?.reps ?? null,
       }));
     }
     persistSession(next);
@@ -186,8 +197,8 @@ export function WorkoutSessionView() {
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{day.focus}</p>
           </header>
           <p className="text-sm leading-6 text-muted-foreground">
-            Check the pictures and videos first. Tap a lift for the GIF, start
-            and finish stills, and the form video.
+            Still photos and last kg on the list. Tap a row for the GIF on this
+            page, then Back.
           </p>
           <WorkoutExercisePreview exercises={day.exercises} />
           <div className="sticky bottom-24 z-10 space-y-2">
@@ -336,6 +347,8 @@ export function WorkoutSessionView() {
         );
         if (!logged) return null;
         const prev = previousSets(athlete, session.dayId, exercise.id);
+        const load = lastLoad(athlete, exercise.id);
+        const howOpen = openHow === exercise.id;
         return (
           <Card key={exercise.id}>
             <CardHeader className="pb-2">
@@ -354,19 +367,33 @@ export function WorkoutSessionView() {
                     {exercise.sets} × {exercise.reps}
                     {exercise.tempo ? ` · tempo ${exercise.tempo}` : ""}
                     {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
+                    {load ? ` · last ${load.weight} kg` : ""}
                   </p>
                   </div>
                 </div>
-                <ExerciseHowButton exercise={exercise} label="How" />
+                <ExerciseHowButton
+                  open={howOpen}
+                  onToggle={() =>
+                    setOpenHow((current) =>
+                      current === exercise.id ? null : exercise.id,
+                    )
+                  }
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
+              <ExerciseHowPanel
+                exercise={exercise}
+                open={howOpen}
+                onClose={() => setOpenHow(null)}
+              />
               {logged.sets.map((set, index) => (
                 <SetRow
                   key={`${exercise.id}-${index}`}
                   index={index}
                   set={set}
                   previous={prev[index]}
+                  lastKg={load?.weight}
                   onChange={(nextSet) => {
                     const exercises = session.exercises.map((item) =>
                       item.exerciseId === exercise.id

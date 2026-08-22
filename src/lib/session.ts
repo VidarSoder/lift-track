@@ -3,6 +3,7 @@ import { currentTimeOfDay, formatDateISO } from "@/lib/dates";
 import type {
   AthleteDoc,
   DayKind,
+  LastLoad,
   LoggedSet,
   PersonalRecord,
   ProgramDay,
@@ -51,6 +52,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     lastSessionDate: null,
     lastSessionStatus: null,
     lastByDay: {},
+    lastLoads: {},
     prs: {},
     recent: [],
     sessionsCompleted: 0,
@@ -155,6 +157,7 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
         sets: lastSetsFromSession(session),
       },
     },
+    lastLoads: mergeLoads(athlete.lastLoads, session),
     prs,
     recent,
     sessionsCompleted:
@@ -167,5 +170,44 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
 }
 
 export function previousSets(athlete: AthleteDoc, dayId: DayKind, exerciseId: string) {
-  return athlete.lastByDay[dayId]?.sets[exerciseId] ?? [];
+  const fromDay = athlete.lastByDay[dayId]?.sets[exerciseId];
+  if (fromDay?.some((set) => set.weight != null)) return fromDay;
+  const load = lastLoad(athlete, exerciseId);
+  if (!load) return [];
+  return [{ weight: load.weight, reps: load.reps, done: false }];
+}
+
+export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | null {
+  const stored = athlete.lastLoads?.[exerciseId];
+  if (stored?.weight) return stored;
+  for (const day of Object.values(athlete.lastByDay)) {
+    const done = [...(day?.sets[exerciseId] ?? [])]
+      .reverse()
+      .find((set) => set.done && set.weight != null);
+    if (done?.weight != null && day) {
+      return { weight: done.weight, reps: done.reps, date: day.date };
+    }
+  }
+  const pr = athlete.prs[exerciseId];
+  if (pr) return { weight: pr.weight, reps: pr.reps, date: pr.date };
+  return null;
+}
+
+export function mergeLoads(
+  current: AthleteDoc["lastLoads"],
+  session: WorkoutSession,
+) {
+  const next: Record<string, LastLoad> = { ...(current ?? {}) };
+  for (const exercise of session.exercises) {
+    const done = [...exercise.sets]
+      .reverse()
+      .find((set) => set.done && set.weight != null);
+    if (done?.weight == null) continue;
+    next[exercise.exerciseId] = {
+      weight: done.weight,
+      reps: done.reps,
+      date: session.date,
+    };
+  }
+  return next;
 }

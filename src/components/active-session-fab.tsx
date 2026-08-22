@@ -25,10 +25,10 @@ export function ActiveSessionFab() {
   const shortTitle = todaySession.title.split("·")[0].trim();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[5.75rem] z-30 mx-auto flex max-w-md justify-end px-4">
+    <div className="shrink-0 border-t border-border/60 bg-background px-4 py-2">
       <Link
         href="/workout"
-        className="pointer-events-auto inline-flex max-w-full items-center gap-2 rounded-full border border-border/80 bg-background/90 px-3.5 py-2.5 text-sm font-medium shadow-lg shadow-black/25 backdrop-blur-md"
+        className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-sm font-medium"
       >
         <span className="grid size-8 place-items-center rounded-full bg-primary/15 text-primary">
           <Dumbbell className="size-4" />

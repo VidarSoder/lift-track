@@ -111,6 +111,12 @@ export type PersonalRecord = {
   date: string;
 };
 
+export type LastLoad = {
+  weight: number;
+  reps: number | null;
+  date: string;
+};
+
 export type AthleteDoc = {
   name: string;
   timezone: string;
@@ -118,6 +124,7 @@ export type AthleteDoc = {
   lastSessionDate: string | null;
   lastSessionStatus: WorkoutSession["status"] | null;
   lastByDay: Partial<Record<DayKind, { date: string; sets: LastSets }>>;
+  lastLoads?: Record<string, LastLoad>;
   prs: Record<string, PersonalRecord>;
   recent: SessionSummary[];
   sessionsCompleted: number;

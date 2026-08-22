@@ -80,8 +80,7 @@ export function TodayView() {
       >
         <p className="font-medium">Preview every lift first</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Photos, a looping GIF, and a video for each exercise. Open Form any
-          time — nothing starts from there.
+          Still photos and last kg. Tap a row for the GIF on the page, then Back.
         </p>
       </Link>
 

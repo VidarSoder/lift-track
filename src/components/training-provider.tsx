@@ -10,7 +10,7 @@ import {
 } from "react";
 import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
-import { createAthlete } from "@/lib/session";
+import { createAthlete, mergeLoads } from "@/lib/session";
 import { loadBundle, queueSave, saveCompleted, saveNow, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
 
@@ -78,6 +78,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         ...athlete,
         lastSessionDate: session.date,
         lastSessionStatus: session.status,
+        lastLoads: mergeLoads(athlete.lastLoads, session),
         updatedAt: session.updatedAt,
       };
       setAthleteState(nextAthlete);

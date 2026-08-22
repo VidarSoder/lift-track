@@ -1,23 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, Play } from "lucide-react";
-import type { Exercise } from "@/lib/types";
-import {
-  mediaFor,
-  photoUrl,
-  youtubeEmbed,
-  youtubeThumb,
-  youtubeWatch,
-} from "@/data/media";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ChevronDown, ExternalLink } from "lucide-react";
+import type { Exercise, LastLoad } from "@/lib/types";
+import { mediaFor, photoUrl, youtubeThumb, youtubeWatch } from "@/data/media";
+import { lastLoad } from "@/lib/session";
 import { ExerciseMark, markEdge } from "@/components/exercise-mark";
+import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -82,272 +71,269 @@ function FormLoop({
   );
 }
 
-function Still({
+function StillPhoto({
   slug,
-  frame,
-  label,
   alt,
+  className,
 }: {
   slug: string;
-  frame: 0 | 1;
-  label: string;
   alt: string;
+  className?: string;
 }) {
   return (
-    <figure className="overflow-hidden rounded-xl bg-black">
-      <img
-        src={photoUrl(slug, frame)}
-        alt={`${alt} ${label.toLowerCase()}`}
-        className="aspect-[4/5] w-full object-contain"
-      />
-      <figcaption className="bg-secondary px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </figcaption>
-    </figure>
+    <img
+      src={photoUrl(slug, 0)}
+      alt={alt}
+      className={cn("h-full w-full bg-black object-cover", className)}
+    />
   );
 }
 
-export function ExerciseGuide({
+function loadLabel(load: LastLoad | null) {
+  if (!load) return null;
+  return load.reps
+    ? `Last ${load.weight} kg × ${load.reps}`
+    : `Last ${load.weight} kg`;
+}
+
+export function ExerciseRow({
   exercise,
   open,
-  onOpenChange,
+  onToggle,
+  load,
 }: {
   exercise: Exercise;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onToggle: () => void;
+  load?: LastLoad | null;
 }) {
   const media = mediaFor(exercise.id);
-  const [playing, setPlaying] = useState(false);
+  const last = loadLabel(load ?? null);
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setPlaying(false);
-        onOpenChange(next);
-      }}
+    <article
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border border-l-2 bg-card",
+        markEdge(exercise.id),
+      )}
     >
-      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-md">
-        <DialogHeader className="pr-8">
-          <div className="flex items-start gap-3">
-            <ExerciseMark id={exercise.id} />
-            <div>
-              <DialogTitle className="text-lg">{exercise.name}</DialogTitle>
-              <DialogDescription>
-                {exercise.group} · {exercise.sets} × {exercise.reps}
-                {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        {media ? (
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl bg-black">
-              {playing ? (
-                <div className="aspect-video">
-                  <iframe
-                    title={`${exercise.name} form video`}
-                    src={youtubeEmbed(media.youtube)}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="h-full w-full border-0"
-                  />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPlaying(true)}
-                  className="relative block aspect-video w-full"
-                >
-                  <img
-                    src={youtubeThumb(media.youtube)}
-                    alt={`${exercise.name} video`}
-                    className="h-full w-full object-cover"
-                  />
-                  <span className="absolute inset-0 bg-black/35" />
-                  <span className="absolute inset-0 grid place-items-center">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">
-                      <Play className="size-4 fill-black" />
-                      Play video
-                    </span>
-                  </span>
-                </button>
-              )}
-            </div>
-
-            <a
-              href={youtubeWatch(media.youtube)}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-medium"
-            >
-              <ExternalLink className="size-4" />
-              Open in YouTube
-            </a>
-
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Start and finish
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Still slug={media.slug} frame={0} label="Start" alt={exercise.name} />
-                <Still slug={media.slug} frame={1} label="Finish" alt={exercise.name} />
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Motion loop
-              </p>
-              <div className="aspect-[4/3] overflow-hidden rounded-xl bg-black">
-                <FormLoop
-                  slug={media.slug}
-                  youtube={media.youtube}
-                  alt={exercise.name}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="space-y-3 text-sm leading-6 text-muted-foreground">
-          <p>
-            <span className="font-medium text-foreground">Setup. </span>
-            {exercise.setup}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">The rep. </span>
-            {exercise.how}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">Watch for. </span>
-            {exercise.mistakes}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+      >
+        <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
+          {media ? <StillPhoto slug={media.slug} alt={exercise.name} /> : null}
+        </div>
+        <ExerciseMark id={exercise.id} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium leading-tight">{exercise.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {exercise.group} · {exercise.sets} × {exercise.reps}
+            {last ? ` · ${last}` : ""}
           </p>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+          {open ? "Close" : "GIF"}
+          <ChevronDown
+            className={cn("size-3.5 transition-transform", open && "rotate-180")}
+          />
+        </span>
+      </button>
 
-export function ExerciseHowButton({
-  exercise,
-  label = "How",
-}: {
-  exercise: Exercise;
-  label?: string;
-}) {
-  const [open, setOpen] = useState(false);
+      {open ? (
+        <div className="space-y-3 border-t border-border px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              How it moves
+            </p>
+            <button
+              type="button"
+              onClick={onToggle}
+              className="text-xs font-medium text-primary"
+            >
+              Back
+            </button>
+          </div>
 
-  return (
-    <>
-      <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      <ExerciseGuide exercise={exercise} open={open} onOpenChange={setOpen} />
-    </>
-  );
-}
-
-export function ExercisePreviewCard({
-  exercise,
-  compact = false,
-}: {
-  exercise: Exercise;
-  compact?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const media = mediaFor(exercise.id);
-
-  if (compact) {
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-2xl border border-border border-l-2 bg-card px-3 py-2.5 text-left",
-            markEdge(exercise.id),
-          )}
-        >
-          <ExerciseMark id={exercise.id} size="sm" />
-          <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-black">
-            {media ? (
+          {media ? (
+            <div className="aspect-[5/4] overflow-hidden rounded-xl bg-black">
               <FormLoop
                 slug={media.slug}
                 youtube={media.youtube}
                 alt={exercise.name}
-                fit="cover"
               />
-            ) : null}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium leading-tight">{exercise.name}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {exercise.group} · {exercise.sets} × {exercise.reps}
+            </div>
+          ) : null}
+
+          {media ? (
+            <div className="grid grid-cols-2 gap-2">
+              <figure className="overflow-hidden rounded-lg bg-black">
+                <img
+                  src={photoUrl(media.slug, 0)}
+                  alt={`${exercise.name} start`}
+                  className="aspect-[4/5] w-full object-contain"
+                />
+                <figcaption className="bg-secondary px-2 py-1 text-center text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Start
+                </figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-lg bg-black">
+                <img
+                  src={photoUrl(media.slug, 1)}
+                  alt={`${exercise.name} finish`}
+                  className="aspect-[4/5] w-full object-contain"
+                />
+                <figcaption className="bg-secondary px-2 py-1 text-center text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Finish
+                </figcaption>
+              </figure>
+            </div>
+          ) : null}
+
+          <div className="space-y-2 text-sm leading-6 text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">Setup. </span>
+              {exercise.setup}
+            </p>
+            <p>
+              <span className="font-medium text-foreground">The rep. </span>
+              {exercise.how}
             </p>
           </div>
-          <Play className="size-3.5 shrink-0 text-muted-foreground" />
-        </button>
-        <ExerciseGuide exercise={exercise} open={open} onOpenChange={setOpen} />
-      </>
-    );
-  }
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          "w-full overflow-hidden rounded-2xl border border-border border-l-2 bg-card text-left",
-          markEdge(exercise.id),
-        )}
-      >
-        <div className="relative aspect-[4/3] bg-black">
           {media ? (
-            <FormLoop
-              slug={media.slug}
-              youtube={media.youtube}
-              alt={exercise.name}
-            />
+            <a
+              href={youtubeWatch(media.youtube)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline"
+            >
+              <ExternalLink className="size-3.5" />
+              Short video on YouTube
+            </a>
           ) : null}
-          <span className="absolute top-3 left-3">
-            <ExerciseMark id={exercise.id} />
-          </span>
-          <span className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-black">
-            <Play className="size-3 fill-black" />
-            Video + how
-          </span>
         </div>
-        <div className="px-3 py-3">
-          <p className="font-medium leading-tight">{exercise.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {exercise.group} · {exercise.sets} × {exercise.reps} · {exercise.equipment}
-          </p>
-        </div>
-      </button>
-      <ExerciseGuide exercise={exercise} open={open} onOpenChange={setOpen} />
-    </>
+      ) : null}
+    </article>
   );
 }
 
-export function WorkoutExercisePreview({
-  exercises,
-  compact = false,
-}: {
-  exercises: Exercise[];
-  compact?: boolean;
-}) {
+export function ExerciseList({ exercises }: { exercises: Exercise[] }) {
+  const { athlete } = useTraining();
+  const [openId, setOpenId] = useState<string | null>(null);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {exercises.map((exercise) => (
-        <ExercisePreviewCard
+        <ExerciseRow
           key={exercise.id}
           exercise={exercise}
-          compact={compact}
+          load={lastLoad(athlete, exercise.id)}
+          open={openId === exercise.id}
+          onToggle={() =>
+            setOpenId((current) => (current === exercise.id ? null : exercise.id))
+          }
         />
       ))}
     </div>
   );
+}
+
+export function ExerciseBook({
+  groups,
+}: {
+  groups: { group: string; exercises: Exercise[] }[];
+}) {
+  const { athlete } = useTraining();
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.group} className="space-y-2">
+          <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            {group.group}
+          </h2>
+          {group.exercises.map((exercise) => (
+            <ExerciseRow
+              key={exercise.id}
+              exercise={exercise}
+              load={lastLoad(athlete, exercise.id)}
+              open={openId === exercise.id}
+              onToggle={() =>
+                setOpenId((current) => (current === exercise.id ? null : exercise.id))
+              }
+            />
+          ))}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function ExerciseHowButton({
+  open,
+  onToggle,
+  label = "How",
+}: {
+  open: boolean;
+  onToggle: () => void;
+  label?: string;
+}) {
+  return (
+    <Button type="button" size="sm" variant="ghost" onClick={onToggle}>
+      {open ? "Close" : label}
+    </Button>
+  );
+}
+
+export function ExerciseHowPanel({
+  exercise,
+  open,
+  onClose,
+}: {
+  exercise: Exercise;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const media = mediaFor(exercise.id);
+  if (!open) return null;
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-secondary/40 p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          How it moves
+        </p>
+        <button type="button" onClick={onClose} className="text-xs font-medium text-primary">
+          Back
+        </button>
+      </div>
+      {media ? (
+        <div className="aspect-[5/4] overflow-hidden rounded-xl bg-black">
+          <FormLoop slug={media.slug} youtube={media.youtube} alt={exercise.name} />
+        </div>
+      ) : null}
+      <p className="text-sm leading-6 text-muted-foreground">
+        <span className="font-medium text-foreground">The rep. </span>
+        {exercise.how}
+      </p>
+      {media ? (
+        <a
+          href={youtubeWatch(media.youtube)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline"
+        >
+          <ExternalLink className="size-3.5" />
+          Short video on YouTube
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+export function WorkoutExercisePreview({ exercises }: { exercises: Exercise[] }) {
+  return <ExerciseList exercises={exercises} />;
 }
