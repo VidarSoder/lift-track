@@ -93,6 +93,28 @@ function SetRow({
 }) {
   const startWeight = previous?.weight ?? lastKg ?? 20;
   const startReps = previous?.reps ?? 8;
+  const [confirmClear, setConfirmClear] = useState(false);
+  const confirmTimer = useRef<number | null>(null);
+
+  function cancelClear() {
+    if (confirmTimer.current) window.clearTimeout(confirmTimer.current);
+    confirmTimer.current = null;
+    setConfirmClear(false);
+  }
+
+  function requestClear() {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      if (confirmTimer.current) window.clearTimeout(confirmTimer.current);
+      confirmTimer.current = window.setTimeout(() => {
+        setConfirmClear(false);
+        confirmTimer.current = null;
+      }, 2500);
+      return;
+    }
+    cancelClear();
+    onChange({ weight: null, reps: null, done: false });
+  }
 
   return (
     <div
@@ -111,22 +133,26 @@ function SetRow({
           <Stepper
             value={set.weight}
             unit="kg"
-            onMinus={() =>
-              onChange({ ...set, weight: nudge(set.weight, -2.5, startWeight) })
-            }
-            onPlus={() =>
-              onChange({ ...set, weight: nudge(set.weight, 2.5, startWeight) })
-            }
+            onMinus={() => {
+              cancelClear();
+              onChange({ ...set, weight: nudge(set.weight, -2.5, startWeight) });
+            }}
+            onPlus={() => {
+              cancelClear();
+              onChange({ ...set, weight: nudge(set.weight, 2.5, startWeight) });
+            }}
           />
           <Stepper
             value={set.reps}
             unit="reps"
-            onMinus={() =>
-              onChange({ ...set, reps: nudge(set.reps, -1, startReps) })
-            }
-            onPlus={() =>
-              onChange({ ...set, reps: nudge(set.reps, 1, startReps) })
-            }
+            onMinus={() => {
+              cancelClear();
+              onChange({ ...set, reps: nudge(set.reps, -1, startReps) });
+            }}
+            onPlus={() => {
+              cancelClear();
+              onChange({ ...set, reps: nudge(set.reps, 1, startReps) });
+            }}
           />
         </div>
         {extra && onRemove ? (
@@ -148,22 +174,33 @@ function SetRow({
             : "Copied from the set above"}
         </p>
       ) : null}
-      <Button
-        type="button"
-        variant={set.done ? "default" : "outline"}
-        className="h-11 w-full min-w-0"
-        onClick={() =>
-          onChange({
-            ...set,
-            weight: set.weight ?? startWeight,
-            reps: set.reps ?? startReps,
-            done: !set.done,
-          })
-        }
-      >
-        {set.done ? <Check className="size-4" /> : null}
-        {set.done ? "Saved" : "Save set"}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant={confirmClear ? "destructive" : "outline"}
+          className="h-9 shrink-0 px-2.5 text-xs"
+          onClick={requestClear}
+        >
+          {confirmClear ? "Tap again" : "Clear set"}
+        </Button>
+        <Button
+          type="button"
+          variant={set.done ? "default" : "outline"}
+          className="h-11 min-w-0 flex-1"
+          onClick={() => {
+            cancelClear();
+            onChange({
+              ...set,
+              weight: set.weight ?? startWeight,
+              reps: set.reps ?? startReps,
+              done: !set.done,
+            });
+          }}
+        >
+          {set.done ? <Check className="size-4" /> : null}
+          {set.done ? "Saved" : "Save set"}
+        </Button>
+      </div>
     </div>
   );
 }
