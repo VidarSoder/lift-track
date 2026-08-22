@@ -147,9 +147,8 @@
 
 .app-scroll {
   overflow-y: scroll;
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
 }
 
 html.is-standalone,

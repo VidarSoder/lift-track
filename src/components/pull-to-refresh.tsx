@@ -5,6 +5,7 @@ import { ArrowDown, LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const THRESHOLD = 64;
+const ARM = 10;
 
 export function PullToRefresh({
   onRefresh,
@@ -53,9 +54,14 @@ export function PullToRefresh({
     if (!node) return;
 
     const atTop = () => node.scrollTop <= 1;
+    const inside = (event: TouchEvent) =>
+      event.target instanceof Node && node.contains(event.target);
 
     const onStart = (event: TouchEvent) => {
-      if (busy.current) return;
+      if (busy.current || !inside(event)) {
+        pulling.current = false;
+        return;
+      }
       if (!atTop()) {
         pulling.current = false;
         return;
@@ -74,13 +80,15 @@ export function PullToRefresh({
       }
       const y = event.touches[0]?.clientY ?? 0;
       const delta = y - startY.current;
-      if (delta <= 0) {
-        paint(0);
-        setArmed(false);
+      if (delta <= ARM) {
+        if (delta <= 0) {
+          paint(0);
+          setArmed(false);
+        }
         return;
       }
       event.preventDefault();
-      const distance = Math.min(96, delta * 0.38);
+      const distance = Math.min(96, (delta - ARM) * 0.42);
       paint(distance);
       setArmed(distance >= THRESHOLD);
     };
@@ -107,26 +115,27 @@ export function PullToRefresh({
       }
     };
 
-    node.addEventListener("touchstart", onStart, { passive: true });
-    node.addEventListener("touchmove", onMove, { passive: false });
-    node.addEventListener("touchend", onEnd);
-    node.addEventListener("touchcancel", onEnd);
+    document.addEventListener("touchstart", onStart, { passive: true, capture: true });
+    document.addEventListener("touchmove", onMove, { passive: false, capture: true });
+    document.addEventListener("touchend", onEnd, { capture: true });
+    document.addEventListener("touchcancel", onEnd, { capture: true });
     return () => {
-      node.removeEventListener("touchstart", onStart);
-      node.removeEventListener("touchmove", onMove);
-      node.removeEventListener("touchend", onEnd);
-      node.removeEventListener("touchcancel", onEnd);
+      document.removeEventListener("touchstart", onStart, true);
+      document.removeEventListener("touchmove", onMove, true);
+      document.removeEventListener("touchend", onEnd, true);
+      document.removeEventListener("touchcancel", onEnd, true);
     };
   }, []);
 
   return (
     <div
       ref={scroller}
+      data-app-scroll
       className={cn("app-scroll relative flex min-h-0 flex-1 flex-col", className)}
     >
       <div
         ref={indicator}
-        className="pointer-events-none flex items-end justify-center overflow-hidden opacity-0"
+        className="pointer-events-none flex shrink-0 items-end justify-center overflow-hidden opacity-0"
         style={{ height: 0 }}
       >
         <div
@@ -145,7 +154,7 @@ export function PullToRefresh({
           )}
         </div>
       </div>
-      {children}
+      <div className="flex min-h-full flex-col">{children}</div>
     </div>
   );
 }
