@@ -1,8 +1,8 @@
 # Training
 
-Phone-first training log for Vidar. It follows a weekly **Get Huge Arms** specialization plus the second (legs / compounds) workout: today’s session, set-by-set weights, previous loads, how you felt, and progress — without a login wall.
+Phone-first training log for Vidar. Today’s session, set-by-set weights, previous loads, how you felt, and progress.
 
-Bookmark `/go/huge-arms` on your phone (or Share → Add to Home Screen). After the first unlock the passphrase stays on the device.
+Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
 
 ## Weekly plan
 
@@ -16,38 +16,28 @@ Bookmark `/go/huge-arms` on your phone (or Share → Add to Home Screen). After 
 | Sat | Optional walk + mobility |
 | Sun | Rest |
 
-The schedule lives in `src/data/program.ts`. The three source PDFs were not available in this workspace, so the days are encoded from the Get Huge Arms / second-workout structure. Paste the exact sheets later and we can lock every set to the paper.
+The schedule lives in `src/data/program.ts`.
+
+## Security
+
+- `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` are server-only.
+- Firestore rules deny every client read and write.
+- The Admin SDK writes only the single athlete document and **today’s** session.
+- Unlock attempts are rate-limited. Deletes are not exposed.
+
+I've set up prototype Security Rules to keep the data in Firestore safe. They are designed to be secure because the client SDK is locked out entirely and the server accepts writes only after a signed session cookie. However, you should review and verify them before broadly sharing your app. If you'd like, I can help you harden these rules.
 
 ## Run locally
 
 ```bash
 npm install
+# place Admin credentials at .secrets/firebase-admin.json
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://127.0.0.1:43173](http://127.0.0.1:43173) and enter `huge-arms`, or go straight to `/go/huge-arms`.
+Open [http://127.0.0.1:43173](http://127.0.0.1:43173).
 
 ## Vercel
 
-This is a standard Next.js app. Import the Git repo in Vercel (Stockholm `arn1` is set in `vercel.json`). Add the same env vars as `.env.example`.
-
-Change the passphrase with `NEXT_PUBLIC_ACCESS_PASSPHRASE` and bookmark `/go/<that-word>`.
-
-## Firebase
-
-Live project: **vidar-training** (Europe `eur3`). The web app is already registered and the client config is baked into `src/lib/firebase.ts`.
-
-Document layout (few reads on purpose):
-
-- `athletes/{sha256(passphrase + salt)}` — profile, PRs, last loads per day, last 12 session summaries
-- `athletes/{id}/sessions/{yyyy-mm-dd}` — the actual sets
-
-On open: **one** athlete read. Today’s session is read only if that document says a session is already open today. No collection scans, no live listeners. Writes are debounced.
-
-Console: https://console.firebase.google.com/project/vidar-training/overview
-
-Deploy rules from this repo:
-
-```bash
-npx -y firebase-tools@latest deploy --only firestore
-```
+Project: `training` under your Vercel account. Production env holds the same server secrets. Do not add `NEXT_PUBLIC_` copies of the passphrase or Admin key.

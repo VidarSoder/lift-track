@@ -8,10 +8,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import { configuredPassphrase, isUnlocked, persistUnlock } from "@/lib/auth";
+import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { createAthlete } from "@/lib/session";
-import { loadBundle, queueSave, saveCompleted, saveNow } from "@/lib/store";
+import { loadBundle, queueSave, saveCompleted, saveNow, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
 
 type TrainingContextValue = {
@@ -36,19 +36,20 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     createAthlete(formatDateISO()),
   );
   const [todaySession, setTodaySessionState] = useState<WorkoutSession>();
-  const [passphrase, setPassphrase] = useState(configuredPassphrase());
 
   useEffect(() => {
     let cancelled = false;
     async function boot() {
-      if (!isUnlocked()) {
+      if (!hasUnlockFlag()) {
         setReady(true);
         return;
       }
-      const key = configuredPassphrase();
-      setPassphrase(key);
-      const bundle = await loadBundle(key);
+      const bundle = await loadBundle();
       if (cancelled) return;
+      if (!bundle) {
+        setReady(true);
+        return;
+      }
       setAthleteState(bundle.athlete);
       setTodaySessionState(bundle.today);
       setUnlocked(true);
@@ -61,9 +62,9 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const unlock = useCallback(async (value: string) => {
-    persistUnlock(value);
-    const bundle = await loadBundle(value);
-    setPassphrase(value);
+    const bundle = await unlockWithPassphrase(value);
+    if (!bundle) return false;
+    persistUnlock();
     setAthleteState(bundle.athlete);
     setTodaySessionState(bundle.today);
     setUnlocked(true);
@@ -80,26 +81,26 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         updatedAt: session.updatedAt,
       };
       setAthleteState(nextAthlete);
-      queueSave(passphrase, { athlete: nextAthlete, today: session });
+      queueSave({ athlete: nextAthlete, today: session });
     },
-    [athlete, passphrase],
+    [athlete],
   );
 
   const completeSession = useCallback(
     (session: WorkoutSession) => {
-      const bundle = saveCompleted(passphrase, athlete, session);
+      const bundle = saveCompleted(athlete, session);
       setAthleteState(bundle.athlete);
       setTodaySessionState(bundle.today);
     },
-    [athlete, passphrase],
+    [athlete],
   );
 
   const setAthlete = useCallback(
     (next: AthleteDoc) => {
       setAthleteState(next);
-      queueSave(passphrase, { athlete: next, today: todaySession });
+      queueSave({ athlete: next, today: todaySession });
     },
-    [passphrase, todaySession],
+    [todaySession],
   );
 
   const setTodaySession = useCallback((session: WorkoutSession | undefined) => {
@@ -107,8 +108,8 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const flush = useCallback(async () => {
-    await saveNow(passphrase, { athlete, today: todaySession });
-  }, [athlete, passphrase, todaySession]);
+    await saveNow({ athlete, today: todaySession });
+  }, [athlete, todaySession]);
 
   const value = useMemo(
     () => ({

@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { passphraseMatches } from "@/lib/auth";
 import { useTraining } from "@/components/training-provider";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -14,23 +13,31 @@ export default function UnlockPage({
 }) {
   const { key } = use(params);
   const value = decodeURIComponent(key);
-  const valid = passphraseMatches(value);
   const { unlock, unlocked } = useTraining();
   const router = useRouter();
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!valid) return;
-    void unlock(value).then(() => router.replace("/"));
-  }, [valid, value, router, unlock]);
+    let cancelled = false;
+    void unlock(value).then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        router.replace("/");
+        return;
+      }
+      setError("This link does not match the training passphrase.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [value, router, unlock]);
 
   if (unlocked) return null;
 
-  if (!valid) {
+  if (error) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <p className="text-sm text-destructive">
-          This link does not match the training passphrase.
-        </p>
+        <p className="text-sm text-destructive">{error}</p>
         <Link href="/" className={buttonVariants({ className: "mt-4" })}>
           Try the passphrase screen
         </Link>

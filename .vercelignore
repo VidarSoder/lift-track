@@ -1,0 +1,4 @@
+.secrets
+.env.local
+agent-tools
+.firestore-analysis.md

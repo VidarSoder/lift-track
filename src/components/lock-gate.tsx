@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BOOKMARK_HINT, PROGRAM_NAME } from "@/data/program";
-import { passphraseMatches, unlockHref } from "@/lib/auth";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ export function LockGate({ children }: { children: React.ReactNode }) {
   const { ready, unlocked, unlock } = useTraining();
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
   const router = useRouter();
 
   if (!ready) {
@@ -27,11 +27,13 @@ export function LockGate({ children }: { children: React.ReactNode }) {
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!passphraseMatches(value)) {
+    setPending(true);
+    const ok = await unlock(value);
+    setPending(false);
+    if (!ok) {
       setError("That passphrase does not match.");
       return;
     }
-    await unlock(value);
     router.replace("/");
   }
 
@@ -44,8 +46,8 @@ export function LockGate({ children }: { children: React.ReactNode }) {
         {PROGRAM_NAME}
       </h1>
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        One passphrase, then bookmark the page on your phone. No account, no
-        login wall after that.
+        One passphrase, then bookmark the page on your phone. The word is
+        checked on the server. Firebase writes only go through that session.
       </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="space-y-2">
@@ -64,14 +66,17 @@ export function LockGate({ children }: { children: React.ReactNode }) {
           />
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" size="lg" className="h-12 w-full text-base">
-          Open training
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 w-full text-base"
+          disabled={pending}
+        >
+          {pending ? "Checking…" : "Open training"}
         </Button>
       </form>
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
-        {BOOKMARK_HINT} Bookmark{" "}
-        <span className="text-foreground">{unlockHref()}</span> if you want the
-        link to unlock itself.
+        {BOOKMARK_HINT}
       </p>
     </div>
   );

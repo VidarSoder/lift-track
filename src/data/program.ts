@@ -3,7 +3,6 @@ import type { ProgramDay, Weekday } from "@/lib/types";
 export const ATHLETE_NAME = "Vidar";
 export const PROGRAM_NAME = "Get Huge Arms";
 export const TIMEZONE = "Europe/Stockholm";
-export const DEFAULT_PASSPHRASE = "huge-arms";
 
 export const DAYS: ProgramDay[] = [
   {

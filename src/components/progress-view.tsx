@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { DAYS } from "@/data/program";
-import { isFirebaseConfigured } from "@/lib/firebase";
-import { unlockHref } from "@/lib/auth";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,15 +129,13 @@ export function ProgressView() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
           <p>
-            Safari / Chrome: share this site → Add to Home Screen. The passphrase
-            stays on the phone, so you open straight into today.
+            Safari / Chrome: share this site → Add to Home Screen. After the
+            first unlock, an httpOnly cookie keeps you in. The passphrase never
+            ships in the JavaScript bundle.
           </p>
-          <p className="break-all text-foreground">Unlock path: {unlockHref()}</p>
           <p>
-            Sync:{" "}
-            {isFirebaseConfigured()
-              ? "Firebase is connected. Each visit reads one athlete document, plus today only if a session is already open."
-              : "Running locally on this phone until Firebase keys are added on Vercel. Nothing is lost on this device."}
+            Sync goes through the server. Firestore itself denies every client
+            read and write. Only today&apos;s session can be saved.
           </p>
         </CardContent>
       </Card>
