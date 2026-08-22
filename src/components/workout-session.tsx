@@ -438,39 +438,59 @@ export function WorkoutSessionView() {
         const done = liftIsDone(logged);
         const open = isExpanded(exercise.id, done);
         const doneSets = logged.sets.filter((set) => set.done).length;
+        function toggleHow() {
+          setOpenHow((current) => (current === exercise.id ? null : exercise.id));
+        }
+
         return (
           <Card key={exercise.id}>
-            <button
-              type="button"
-              onClick={() =>
-                setExpanded((current) => ({
-                  ...current,
-                  [exercise.id]: !open,
-                }))
-              }
-              className="flex w-full items-center gap-3 px-4 py-3 text-left"
-            >
-              <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={toggleHow}
+                className="size-16 shrink-0 overflow-hidden rounded-xl bg-secondary"
+                aria-label={`How to do ${exercise.name}`}
+              >
                 <ExerciseThumb exerciseId={exercise.id} name={exercise.name} />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setExpanded((current) => ({
+                    ...current,
+                    [exercise.id]: !open,
+                  }))
+                }
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {exerciseIndex + 1} · {exercise.group}
+                    {done ? " · done" : ""}
+                  </p>
+                  <p className="font-medium leading-tight">{exercise.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {doneSets}/{exercise.sets} sets
+                    {load ? ` · last ${load.weight} kg` : ""}
+                  </p>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "size-4 shrink-0 text-muted-foreground transition-transform",
+                    open && "rotate-180",
+                  )}
+                />
+              </button>
+            </div>
+            {howOpen ? (
+              <div className="px-4 pb-3">
+                <ExerciseHowPanel
+                  exercise={exercise}
+                  open={howOpen}
+                  onClose={() => setOpenHow(null)}
+                />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {exerciseIndex + 1} · {exercise.group}
-                  {done ? " · done" : ""}
-                </p>
-                <p className="font-medium leading-tight">{exercise.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {doneSets}/{exercise.sets} sets
-                  {load ? ` · last ${load.weight} kg` : ""}
-                </p>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "size-4 shrink-0 text-muted-foreground transition-transform",
-                  open && "rotate-180",
-                )}
-              />
-            </button>
+            ) : null}
             {open ? (
               <CardContent className="space-y-2 pt-0">
                 <div className="flex items-center justify-between gap-3">
@@ -478,11 +498,7 @@ export function WorkoutSessionView() {
                   <div className="flex items-center gap-2">
                     <ExerciseHowButton
                       open={howOpen}
-                      onToggle={() =>
-                        setOpenHow((current) =>
-                          current === exercise.id ? null : exercise.id,
-                        )
-                      }
+                      onToggle={toggleHow}
                     />
                     {done ? null : (
                       <Button
@@ -518,11 +534,6 @@ export function WorkoutSessionView() {
                     )}
                   </div>
                 </div>
-                <ExerciseHowPanel
-                  exercise={exercise}
-                  open={howOpen}
-                  onClose={() => setOpenHow(null)}
-                />
                 {logged.sets.map((set, index) => (
                   <SetRow
                     key={`${exercise.id}-${index}`}
