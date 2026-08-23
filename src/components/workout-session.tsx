@@ -99,7 +99,10 @@ function SetRow({
   onRemove?: () => void;
 }) {
   const startWeight = previous?.weight ?? lastKg ?? units.fallbackLoad;
-  const startReps = previous?.reps ?? (units.work === "min" ? 6 : 8);
+  const startReps =
+    previous?.reps ??
+    (units.only === "work" ? units.fallbackLoad : units.work === "min" ? 6 : 8);
+  const durationOnly = units.only === "work";
   const [confirmClear, setConfirmClear] = useState(false);
   const confirmTimer = useRef<number | null>(null);
 
@@ -136,25 +139,32 @@ function SetRow({
         <span className="grid size-8 shrink-0 place-items-center text-xs font-medium text-muted-foreground">
           {index + 1}
         </span>
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-          <Stepper
-            value={set.weight}
-            unit={units.load}
-            onMinus={() => {
-              cancelClear();
-              onChange({
-                ...set,
-                weight: nudge(set.weight, -units.loadStep, startWeight),
-              });
-            }}
-            onPlus={() => {
-              cancelClear();
-              onChange({
-                ...set,
-                weight: nudge(set.weight, units.loadStep, startWeight),
-              });
-            }}
-          />
+        <div
+          className={cn(
+            "grid min-w-0 flex-1 gap-2",
+            durationOnly ? "grid-cols-1" : "grid-cols-2",
+          )}
+        >
+          {durationOnly ? null : (
+            <Stepper
+              value={set.weight}
+              unit={units.load}
+              onMinus={() => {
+                cancelClear();
+                onChange({
+                  ...set,
+                  weight: nudge(set.weight, -units.loadStep, startWeight),
+                });
+              }}
+              onPlus={() => {
+                cancelClear();
+                onChange({
+                  ...set,
+                  weight: nudge(set.weight, units.loadStep, startWeight),
+                });
+              }}
+            />
+          )}
           <Stepper
             value={set.reps}
             unit={units.work}
@@ -188,9 +198,11 @@ function SetRow({
       {previous?.weight || lastKg || extra ? (
         <p className="px-1 text-[11px] text-muted-foreground">
           {extra ? "Extra set · " : ""}
-          {previous?.weight || lastKg
-            ? `Last ${previous?.weight ?? lastKg} ${units.load}${previous?.reps ? ` × ${previous.reps} ${units.work}` : ""}`
-            : "Copied from the set above"}
+          {durationOnly && (previous?.reps || lastKg)
+            ? `Last ${previous?.reps ?? lastKg} min`
+            : previous?.weight || lastKg
+              ? `Last ${previous?.weight ?? lastKg} ${units.load}${previous?.reps ? ` × ${previous.reps} ${units.work}` : ""}`
+              : "Copied from the set above"}
         </p>
       ) : null}
       <div className="flex items-center gap-2">

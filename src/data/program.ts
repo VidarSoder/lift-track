@@ -594,7 +594,10 @@ export const DAYS: ProgramDay[] = [
       "This is its own session. The Saturday walk and arm-care live here now — pick a walk or the mobility circuit the same way you pick a bike. Finish it and you can still start Push, Arms, or whatever else the same day.",
     exercises: WARMUP_PRESETS.map((preset) => ({
       id: preset.id,
-      name: `${warmupLabel(preset.kind)} · ${preset.title}`,
+      name:
+        preset.kind === "walk"
+          ? "Walk"
+          : `${warmupLabel(preset.kind)} · ${preset.title}`,
       group: warmupLabel(preset.kind),
       sets: preset.steps.length,
       reps: preset.steps.map((step) => `${step.minutes} min`).join(" + "),
@@ -616,7 +619,9 @@ export const DAYS: ProgramDay[] = [
       progress:
         preset.kind === "mobility"
           ? "Consistency beats intensity."
-          : "Same pace is fine. Add a minute before you add speed.",
+          : preset.kind === "walk"
+            ? "Set the minutes you actually walked, then save."
+            : "Same pace is fine. Add a minute before you add speed.",
     })),
   },
   {

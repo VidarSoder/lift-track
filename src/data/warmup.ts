@@ -58,18 +58,11 @@ export const WARMUP_PRESETS: WarmupPreset[] = [
     ],
   },
   {
-    id: "walk-easy-10",
+    id: "walk-easy",
     kind: "walk",
-    title: "Easy 10 minutes",
-    detail: "Before a lift, or when you only have a little time",
-    steps: [{ minutes: 10, pace: "5.5 km/h" }],
-  },
-  {
-    id: "walk-easy-30",
-    kind: "walk",
-    title: "Easy 30 minutes",
-    detail: "The old Saturday walk. Speak in full sentences.",
-    steps: [{ minutes: 30, pace: "5.5 km/h" }],
+    title: "Easy walk",
+    detail: "Set how many minutes you walked, then save. Short before a lift, or 30 if that is the session.",
+    steps: [{ minutes: 20, pace: "Easy" }],
   },
   {
     id: "arms-mobility",
@@ -116,7 +109,14 @@ export function cardioUnits(group: string) {
     return { load: "lvl", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 5 };
   }
   if (group === "Walk") {
-    return { load: "km/h", work: "min", loadStep: 0.5, workStep: 1, fallbackLoad: 5.5 };
+    return {
+      load: "min",
+      work: "min",
+      loadStep: 1,
+      workStep: 1,
+      fallbackLoad: 20,
+      only: "work" as const,
+    };
   }
   if (group === "Mobility") {
     return { load: "rpe", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 3 };

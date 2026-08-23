@@ -165,6 +165,7 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "arm-care": { icon: HeartPulse, tone: TONES.clay },
   "walk-easy-10": { icon: Route, tone: TONES.sage },
   "walk-easy-30": { icon: Route, tone: TONES.moss },
+  "walk-easy": { icon: Route, tone: TONES.moss },
   "arms-mobility": { icon: HeartPulse, tone: TONES.clay },
   "bike-easy-8": { icon: Bike, tone: TONES.sage },
   "bike-ramp-10": { icon: Bike, tone: TONES.pine },
