@@ -14,6 +14,7 @@ import {
   createSession,
   emptyAfter,
   insertWarmupSet,
+  forgetTodaysLift,
   lastCardioLoad,
   lastLoad,
   liftIsDone,
@@ -276,7 +277,9 @@ export function WorkoutSessionView() {
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
   const [pendingExtras, setPendingExtras] = useState<PinnedExercise[]>([]);
+  const [dismissId, setDismissId] = useState<string | null>(null);
   const afterRef = useRef<HTMLDivElement>(null);
+  const dismissTimer = useRef<number | null>(null);
 
   function celebrateDone(name: string, id: string) {
     setJustDone(id);
@@ -1059,6 +1062,66 @@ export function WorkoutSessionView() {
                   >
                     <Plus className="size-4" />
                     Add a set
+                  </Button>
+                ) : null}
+                {session.status !== "completed" ? (
+                  <Button
+                    type="button"
+                    variant={dismissId === exercise.id ? "destructive" : "ghost"}
+                    className="h-11 w-full min-w-0 text-muted-foreground"
+                    onClick={() => {
+                      if (session.exercises.length <= 1) {
+                        toast.message(
+                          "That's the last lift. Cancel the session if you want out.",
+                        );
+                        return;
+                      }
+                      if (dismissId !== exercise.id) {
+                        setDismissId(exercise.id);
+                        if (dismissTimer.current) {
+                          window.clearTimeout(dismissTimer.current);
+                        }
+                        dismissTimer.current = window.setTimeout(() => {
+                          setDismissId(null);
+                          dismissTimer.current = null;
+                        }, 2500);
+                        return;
+                      }
+                      if (dismissTimer.current) {
+                        window.clearTimeout(dismissTimer.current);
+                      }
+                      setDismissId(null);
+                      persistSession(
+                        {
+                          ...session,
+                          exercises: session.exercises.filter(
+                            (item) => item.exerciseId !== exercise.id,
+                          ),
+                          updatedAt: new Date().toISOString(),
+                        },
+                        {
+                          immediate: true,
+                          athlete: forgetTodaysLift(
+                            athlete,
+                            exercise.id,
+                            session.date,
+                          ),
+                        },
+                      );
+                      setOpenHow((current) =>
+                        current === exercise.id ? null : current,
+                      );
+                      setExpanded((current) => {
+                        const next = { ...current };
+                        delete next[exercise.id];
+                        return next;
+                      });
+                      toast.message(`${exercise.name} dismissed`);
+                    }}
+                  >
+                    {dismissId === exercise.id
+                      ? "Tap again to dismiss"
+                      : "Dismiss this lift"}
                   </Button>
                 ) : null}
               </CardContent>

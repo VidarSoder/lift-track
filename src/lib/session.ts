@@ -386,6 +386,25 @@ export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | nu
   return null;
 }
 
+export function forgetTodaysLift(
+  athlete: AthleteDoc,
+  exerciseId: string,
+  date: string,
+): AthleteDoc {
+  const lastLoads = { ...(athlete.lastLoads ?? {}) };
+  if (lastLoads[exerciseId]?.date === date) {
+    delete lastLoads[exerciseId];
+  }
+  return {
+    ...athlete,
+    lastLoads,
+    liftLog: (athlete.liftLog ?? []).filter(
+      (point) => !(point.date === date && point.exerciseId === exerciseId),
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function mergeLoads(
   current: AthleteDoc["lastLoads"],
   session: WorkoutSession,
