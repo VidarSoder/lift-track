@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import {
+  clampKg,
   latestWeight,
+  parseKgInput,
   removeBodyWeight,
   upsertBodyWeight,
+  weighInSliderBounds,
   weightDelta,
   weightLog,
 } from "@/lib/weight";
@@ -16,10 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function nudge(value: number, step: number) {
-  return Math.max(30, Math.min(250, Number((value + step).toFixed(1))));
-}
+import { Slider } from "@/components/ui/slider";
 
 function WeightBars({ entries }: { entries: { date: string; kg: number }[] }) {
   const chronological = [...entries].reverse();
@@ -50,8 +49,10 @@ export function SettingsView() {
   const current = latestWeight(athlete);
   const delta = weightDelta(athlete);
   const [kg, setKg] = useState(current?.kg ?? 85);
+  const [typedKg, setTypedKg] = useState<string | null>(null);
   const [date, setDate] = useState(formatDateISO());
   const [start, setStart] = useState(athlete.programStartDate);
+  const slider = weighInSliderBounds(kg);
 
   function saveWeight() {
     const next = upsertBodyWeight(athlete, { date, kg });
@@ -60,7 +61,7 @@ export function SettingsView() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-4">
       <header>
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
           Settings
@@ -96,29 +97,47 @@ export function SettingsView() {
 
           {log.length >= 2 ? <WeightBars entries={log.slice(0, 16)} /> : null}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="kg">New weigh-in</Label>
-            <div className="flex items-center justify-between rounded-xl bg-secondary px-1 py-1">
-              <button
-                type="button"
-                className="grid size-11 place-items-center"
-                onClick={() => setKg((value) => nudge(value, -0.1))}
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className="text-lg font-semibold">
-                {kg.toFixed(1)}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                  kg
-                </span>
-              </span>
-              <button
-                type="button"
-                className="grid size-11 place-items-center"
-                onClick={() => setKg((value) => nudge(value, 0.1))}
-              >
-                <Plus className="size-4" />
-              </button>
+            <div className="rounded-2xl bg-secondary px-4 py-4">
+              <div className="flex items-baseline justify-center gap-1.5">
+                <input
+                  id="kg"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={typedKg ?? kg.toFixed(1)}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setTypedKg(next);
+                    const parsed = parseKgInput(next);
+                    if (parsed != null) setKg(parsed);
+                  }}
+                  onBlur={() => setTypedKg(null)}
+                  aria-label="Body weight in kilograms"
+                  className="font-heading w-36 bg-transparent text-center text-5xl font-semibold tracking-tight tabular-nums outline-none"
+                />
+                <span className="text-sm text-muted-foreground">kg</span>
+              </div>
+              <Slider
+                className="mt-5"
+                min={slider.min}
+                max={slider.max}
+                step={0.1}
+                value={[kg]}
+                onValueChange={(value) => {
+                  const next = Array.isArray(value) ? value[0] : value;
+                  if (typeof next !== "number") return;
+                  setTypedKg(null);
+                  setKg(clampKg(next));
+                }}
+                aria-label="Body weight slider"
+              />
+              <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
+                <span>{slider.min.toFixed(0)}</span>
+                <span>Slide or type · 0.1 kg</span>
+                <span>{slider.max.toFixed(0)}</span>
+              </div>
             </div>
           </div>
 

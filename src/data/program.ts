@@ -147,18 +147,33 @@ export const DAYS: ProgramDay[] = [
     exercises: [
       {
         id: "pull-up",
-        name: "Weighted pull-up or lat pulldown",
+        name: "Weighted pull-up",
         group: "Back",
         sets: 4,
         reps: "6–8",
         restSec: 150,
         tempo: "3-0-1-0",
-        equipment: "Bar or lat pulldown",
+        equipment: "Pull-up bar",
         setup:
-          "Shoulder-width or just outside. Depress the scapula before you pull. If you cannot get 6 clean pull-ups, use the pulldown and own the bottom stretch.",
+          "Shoulder-width or just outside. Depress the scapula before you pull. Band if you cannot get 6 clean reps.",
         how: "Pull the elbows to the ribs, chest to the bar. Lower to a dead hang without losing the shoulders.",
         mistakes: "Kipping, half-reps, or shrugging the ears to the bar.",
-        progress: "Add 2.5 kg or one pulldown plate after 4×8.",
+        progress: "Add 2.5 kg after 4×8.",
+      },
+      {
+        id: "lat-pulldown",
+        name: "Lat pulldown",
+        group: "Back",
+        sets: 4,
+        reps: "8–12",
+        restSec: 120,
+        tempo: "3-0-1-0",
+        equipment: "Lat pulldown",
+        setup:
+          "Wide-ish grip, a little lean back. Sit so the pad locks the thighs. Start from a full stretch at the top.",
+        how: "Pull the bar to the upper chest, elbows down the sides, pause, then let the arms lengthen.",
+        mistakes: "Behind the neck, bouncing the stack, or shrugging the ears up.",
+        progress: "Add a plate after 4×12 with a pause on the chest.",
       },
       {
         id: "barbell-row",

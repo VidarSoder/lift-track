@@ -15,6 +15,7 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "rope-pushdown": { slug: "Triceps_Pushdown_-_Rope_Attachment", youtube: "nlDC_nk2YI0" },
   "overhead-rope": { slug: "Cable_Rope_Overhead_Triceps_Extension", youtube: "IrVOhK0pNAE" },
   "pull-up": { slug: "Pullups", youtube: "eGo4IYlbE5g" },
+  "lat-pulldown": { slug: "Wide-Grip_Lat_Pulldown", youtube: "CAwf7n6Luuc" },
   "barbell-row": { slug: "Bent_Over_Barbell_Row", youtube: "9Ef-IKYpibY" },
   "cable-row": { slug: "Seated_Cable_Rows", youtube: "G8l_8chR5TU" },
   "face-pull": { slug: "Face_Pull", youtube: "0Po47sVQ6QM" },

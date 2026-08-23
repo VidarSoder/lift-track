@@ -388,7 +388,7 @@ export function WorkoutSessionView() {
               />
             )}
           </div>
-          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-auto border-t border-border/70 bg-background px-4 pt-3 pb-3">
+          <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-border/70 bg-background px-4 pt-3 pb-2">
             {locked ? (
               <p className="rounded-xl bg-secondary/80 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                 Preview only. Your current session stays open — use the floating
@@ -404,7 +404,7 @@ export function WorkoutSessionView() {
       );
     }
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pb-4">
         <header>
           <h1 className="font-heading text-3xl leading-none">Pick a workout</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -433,7 +433,7 @@ export function WorkoutSessionView() {
   if (!session || !day) return null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-4">
       <header className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">

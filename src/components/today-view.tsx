@@ -19,7 +19,7 @@ export function TodayView() {
   const open = isOpenSession(todaySession, today);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-4">
       <header className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
           Choose a workout

@@ -1,6 +1,25 @@
 import type { AthleteDoc, BodyWeight } from "@/lib/types";
 
 const MAX_ENTRIES = 80;
+export const WEIGHT_MIN_KG = 30;
+export const WEIGHT_MAX_KG = 250;
+
+export function clampKg(value: number) {
+  return Math.max(WEIGHT_MIN_KG, Math.min(WEIGHT_MAX_KG, Number(value.toFixed(1))));
+}
+
+export function parseKgInput(raw: string) {
+  const value = Number(raw.trim().replace(",", "."));
+  if (!Number.isFinite(value)) return null;
+  return clampKg(value);
+}
+
+export function weighInSliderBounds(kg: number) {
+  return {
+    min: Math.min(50, Math.max(WEIGHT_MIN_KG, Math.floor(kg) - 5)),
+    max: Math.max(140, Math.min(WEIGHT_MAX_KG, Math.ceil(kg) + 5)),
+  };
+}
 
 export function weightLog(athlete: AthleteDoc): BodyWeight[] {
   return [...(athlete.bodyWeight ?? [])].sort((a, b) => b.date.localeCompare(a.date));
@@ -11,7 +30,7 @@ export function latestWeight(athlete: AthleteDoc) {
 }
 
 export function upsertBodyWeight(athlete: AthleteDoc, entry: BodyWeight): AthleteDoc {
-  const kg = Math.max(30, Math.min(250, Number(entry.kg.toFixed(1))));
+  const kg = clampKg(entry.kg);
   const next = [
     { date: entry.date, kg },
     ...weightLog(athlete).filter((item) => item.date !== entry.date),

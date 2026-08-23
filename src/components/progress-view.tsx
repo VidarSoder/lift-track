@@ -31,7 +31,7 @@ export function ProgressView() {
     .slice(0, 8);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-4">
       <header>
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
           Tracking
