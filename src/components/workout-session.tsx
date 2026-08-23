@@ -145,17 +145,27 @@ function SetRow({
         "flex min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border p-2.5",
         kind === "warmup"
           ? set.done
-            ? "border-dashed border-primary/30 bg-primary/5"
-            : "border-dashed border-border bg-secondary/40"
+            ? "border-amber-600/45 bg-amber-500/15"
+            : "border-amber-800/35 bg-amber-950/40"
           : set.done
             ? "border-primary/35 bg-primary/10"
             : "border-transparent bg-secondary/60",
       )}
     >
+      {kind === "warmup" ? (
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-100">
+            <Flame className="size-3.5" />
+            Warm-up {label.replace(/^W/i, "")}
+          </span>
+        </div>
+      ) : null}
       <div className="flex min-w-0 items-center gap-2">
-        <span className="grid size-8 shrink-0 place-items-center text-xs font-medium text-muted-foreground">
-          {label}
-        </span>
+        {kind === "warmup" ? null : (
+          <span className="grid size-8 shrink-0 place-items-center text-xs font-medium text-muted-foreground">
+            {label}
+          </span>
+        )}
         <div
           className={cn(
             "grid min-w-0 flex-1 gap-2",
@@ -237,8 +247,8 @@ function SetRow({
         ) : null}
       </div>
       {kind === "warmup" ? (
-        <p className="px-1 text-[11px] text-muted-foreground">
-          Warm-up · lighter, not a working set
+        <p className="px-1 text-[11px] font-medium text-amber-100/70">
+          Lighter ramp-up · not a working set
         </p>
       ) : previous?.weight || lastKg || kind === "extra" ? (
         <p className="px-1 text-[11px] text-muted-foreground">
@@ -257,12 +267,15 @@ function SetRow({
           className="h-9 shrink-0 px-2.5 text-xs"
           onClick={requestClear}
         >
-          {confirmClear ? "Tap again" : "Clear set"}
+          {confirmClear ? "Tap again" : kind === "warmup" ? "Clear warm-up" : "Clear set"}
         </Button>
         <Button
           type="button"
           variant={set.done ? "default" : "outline"}
-          className="h-11 min-w-0 flex-1"
+          className={cn(
+            "h-11 min-w-0 flex-1",
+            kind === "warmup" && !set.done && "border-amber-700/50 text-amber-100",
+          )}
           onClick={() => {
             cancelClear();
             onChange({
@@ -274,7 +287,13 @@ function SetRow({
           }}
         >
           {set.done ? <Check className="size-4" /> : null}
-          {set.done ? "Saved" : "Save set"}
+          {set.done
+            ? kind === "warmup"
+              ? "Warm-up saved"
+              : "Saved"
+            : kind === "warmup"
+              ? "Save warm-up"
+              : "Save set"}
         </Button>
       </div>
     </div>
@@ -663,6 +682,7 @@ export function WorkoutSessionView() {
           athlete,
           logged.sets.length,
         );
+        const live = session;
         const fromProgram = day.exercises.some((item) => item.id === exercise.id);
         const prev = previousSets(athlete, session.dayId, exercise.id);
         const load = lastLoad(athlete, exercise.id);
@@ -905,46 +925,69 @@ export function WorkoutSessionView() {
                 ) : null}
                 {bike
                   ? null
-                  : logged.sets.map((set, index) => {
-                  const warmupIndex = set.warmup
-                    ? logged.sets.slice(0, index).filter((entry) => entry.warmup).length
-                    : -1;
-                  const workIndex = set.warmup
-                    ? -1
-                    : logged.sets.slice(0, index).filter((entry) => !entry.warmup)
-                        .length;
-                  const kind = set.warmup
-                    ? "warmup"
-                    : workIndex >= exercise.sets
-                      ? "extra"
-                      : "work";
-                  const previous = set.warmup
-                    ? prevWarm[warmupIndex] ??
-                      (warmupIndex > 0 ? warmLogged[warmupIndex - 1] : undefined)
-                    : prev[workIndex] ??
-                      (workIndex > 0 ? workLogged[workIndex - 1] : undefined);
-                  return (
-                    <SetRow
-                      key={
-                        set.warmup
-                          ? `${exercise.id}-wu-${warmupIndex}`
-                          : `${exercise.id}-work-${workIndex}`
-                      }
-                      label={set.warmup ? `W${warmupIndex + 1}` : String(workIndex + 1)}
-                      set={set}
-                      previous={previous}
-                      lastKg={set.warmup ? null : load?.weight}
-                      kind={kind}
-                      units={units}
-                      fallbackLoad={exercise.defaultLoad ?? units.fallbackLoad}
-                      onRemove={
-                        kind === "work"
-                          ? undefined
-                          : () => {
-                              const exercises = session.exercises.map((item) => {
+                  : (() => {
+                      function rowFor(set: LoggedSet, index: number) {
+                        const warmupIndex = set.warmup
+                          ? logged.sets.slice(0, index).filter((entry) => entry.warmup)
+                              .length
+                          : -1;
+                        const workIndex = set.warmup
+                          ? -1
+                          : logged.sets.slice(0, index).filter((entry) => !entry.warmup)
+                              .length;
+                        const kind = set.warmup
+                          ? "warmup"
+                          : workIndex >= exercise.sets
+                            ? "extra"
+                            : "work";
+                        const previous = set.warmup
+                          ? prevWarm[warmupIndex] ??
+                            (warmupIndex > 0 ? warmLogged[warmupIndex - 1] : undefined)
+                          : prev[workIndex] ??
+                            (workIndex > 0 ? workLogged[workIndex - 1] : undefined);
+                        return (
+                          <SetRow
+                            key={
+                              set.warmup
+                                ? `${exercise.id}-wu-${warmupIndex}`
+                                : `${exercise.id}-work-${workIndex}`
+                            }
+                            label={
+                              set.warmup
+                                ? String(warmupIndex + 1)
+                                : String(workIndex + 1)
+                            }
+                            set={set}
+                            previous={previous}
+                            lastKg={set.warmup ? null : load?.weight}
+                            kind={kind}
+                            units={units}
+                            fallbackLoad={exercise.defaultLoad ?? units.fallbackLoad}
+                            onRemove={
+                              kind === "work"
+                                ? undefined
+                                : () => {
+                                    const exercises = live.exercises.map((item) => {
+                                      if (item.exerciseId !== exercise.id) return item;
+                                      const sets = item.sets.filter(
+                                        (_, setIndex) => setIndex !== index,
+                                      );
+                                      return {
+                                        ...item,
+                                        sets,
+                                        done: liftIsDone({ ...item, sets, done: false }),
+                                      };
+                                    });
+                                    patch({ ...live, exercises }, true);
+                                  }
+                            }
+                            onChange={(nextSet) => {
+                              const exercises = live.exercises.map((item) => {
                                 if (item.exerciseId !== exercise.id) return item;
-                                const sets = item.sets.filter(
-                                  (_, setIndex) => setIndex !== index,
+                                const sets = item.sets.map((current, setIndex) =>
+                                  setIndex === index
+                                    ? { ...nextSet, warmup: Boolean(set.warmup) }
+                                    : current,
                                 );
                                 return {
                                   ...item,
@@ -952,39 +995,48 @@ export function WorkoutSessionView() {
                                   done: liftIsDone({ ...item, sets, done: false }),
                                 };
                               });
-                              patch({ ...session, exercises }, true);
-                            }
-                      }
-                      onChange={(nextSet) => {
-                        const exercises = session.exercises.map((item) => {
-                          if (item.exerciseId !== exercise.id) return item;
-                          const sets = item.sets.map((current, setIndex) =>
-                            setIndex === index
-                              ? { ...nextSet, warmup: set.warmup }
-                              : current,
-                          );
-                          return {
-                            ...item,
-                            sets,
-                            done: liftIsDone({ ...item, sets, done: false }),
-                          };
-                        });
-                        const nowDone = Boolean(
-                          exercises.find((item) => item.exerciseId === exercise.id)
-                            ?.done,
+                              const nowDone = Boolean(
+                                exercises.find((item) => item.exerciseId === exercise.id)
+                                  ?.done,
+                              );
+                              patch({ ...live, exercises }, nextSet.done);
+                              if (nextSet.done && nowDone && !done) {
+                                celebrateDone(exercise.name, exercise.id);
+                                setExpanded((current) => ({
+                                  ...current,
+                                  [exercise.id]: false,
+                                }));
+                              }
+                            }}
+                          />
                         );
-                        patch({ ...session, exercises }, nextSet.done);
-                        if (nextSet.done && nowDone && !done) {
-                          celebrateDone(exercise.name, exercise.id);
-                          setExpanded((current) => ({
-                            ...current,
-                            [exercise.id]: false,
-                          }));
-                        }
-                      }}
-                    />
-                  );
-                })}
+                      }
+                      const warmupRows = logged.sets.flatMap((set, index) =>
+                        set.warmup ? [rowFor(set, index)] : [],
+                      );
+                      const workRows = logged.sets.flatMap((set, index) =>
+                        set.warmup ? [] : [rowFor(set, index)],
+                      );
+                      return (
+                        <>
+                          {warmupRows.length > 0 ? (
+                            <div className="space-y-2 rounded-2xl border border-amber-700/30 bg-amber-950/25 p-2">
+                              <p className="flex items-center gap-1.5 px-1 pt-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-200/85">
+                                <Flame className="size-3.5" />
+                                Warm-up
+                              </p>
+                              {warmupRows}
+                            </div>
+                          ) : null}
+                          {workRows.length > 0 && warmupRows.length > 0 ? (
+                            <p className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                              Working sets
+                            </p>
+                          ) : null}
+                          {workRows}
+                        </>
+                      );
+                    })()}
                 {session.status !== "completed" && !bike ? (
                   <Button
                     type="button"
