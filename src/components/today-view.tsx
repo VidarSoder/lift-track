@@ -36,8 +36,8 @@ export function TodayView() {
             <p className="font-medium">{todaySession?.title}</p>
             {counts ? (
               <p className="text-sm text-muted-foreground">
-                {counts.completedSets} sets logged. Save whenever — you do not
-                have to finish the list.
+                {counts.completedSets} sets logged. Finish whenever — even a
+                short session counts.
               </p>
             ) : null}
             <Link

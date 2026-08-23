@@ -1,6 +1,14 @@
 import { ATHLETE_NAME } from "@/data/program";
 import { formatDateISO } from "@/lib/dates";
-import { applyCompletedSession, cancelWorkout, createAthlete, rememberProgress } from "@/lib/session";
+import {
+  applyCompletedSession,
+  applyReopenedSession,
+  cancelWorkout,
+  createAthlete,
+  isLiveSession,
+  rememberProgress,
+  reopenSession,
+} from "@/lib/session";
 import type { AthleteDoc, CacheBundle, WorkoutSession } from "@/lib/types";
 
 const LOCAL_KEY = "training.cache";
@@ -39,7 +47,7 @@ export async function loadBundle(): Promise<CacheBundle | null> {
     local && local.athlete.name === ATHLETE_NAME
       ? {
           athlete: local.athlete,
-          today: local.today?.date === today ? local.today : undefined,
+          today: isLiveSession(local.today, today) ? local.today : undefined,
         }
       : null;
 
@@ -86,6 +94,14 @@ export async function saveNow(bundle: CacheBundle) {
 export function saveCompleted(athlete: AthleteDoc, session: WorkoutSession) {
   const nextAthlete = applyCompletedSession(athlete, session);
   const bundle = { athlete: nextAthlete, today: session };
+  void saveNow(bundle);
+  return bundle;
+}
+
+export function saveReopened(athlete: AthleteDoc, session: WorkoutSession) {
+  const next = reopenSession(session);
+  const nextAthlete = applyReopenedSession(athlete, next);
+  const bundle = { athlete: nextAthlete, today: next };
   void saveNow(bundle);
   return bundle;
 }

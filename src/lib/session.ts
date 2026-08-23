@@ -78,6 +78,71 @@ export function suggestedWarmup(
   };
 }
 
+export const SESSION_REOPEN_MS = 24 * 60 * 60 * 1000;
+
+export function sessionClosedAt(session: WorkoutSession) {
+  return new Date(
+    session.finishedAt ?? session.clockEndedAt ?? session.startedAt,
+  ).getTime();
+}
+
+export function canReopenSession(
+  session?: WorkoutSession | null,
+  now = Date.now(),
+) {
+  if (!session || session.status !== "completed") return false;
+  return now - sessionClosedAt(session) <= SESSION_REOPEN_MS;
+}
+
+export function isLiveSession(
+  session?: WorkoutSession | null,
+  today = formatDateISO(),
+  now = Date.now(),
+) {
+  if (!session || session.status === "skipped") return false;
+  if (session.date === today) return true;
+  if (session.status === "in_progress") return true;
+  return canReopenSession(session, now);
+}
+
+export function reopenSession(session: WorkoutSession): WorkoutSession {
+  const elapsed = session.clockStartedAt
+    ? spanMs(
+        session.clockStartedAt,
+        session.clockEndedAt ?? session.finishedAt ?? new Date().toISOString(),
+      )
+    : 0;
+  return {
+    ...session,
+    status: "in_progress",
+    finishedAt: undefined,
+    clockStartedAt: new Date(Date.now() - Math.max(0, elapsed)).toISOString(),
+    clockEndedAt: undefined,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function applyReopenedSession(
+  athlete: AthleteDoc,
+  session: WorkoutSession,
+): AthleteDoc {
+  const wasLogged = athlete.recent.some(
+    (item) => item.date === session.date && item.dayId === session.dayId,
+  );
+  return {
+    ...athlete,
+    lastSessionDate: session.date,
+    lastSessionStatus: "in_progress",
+    recent: athlete.recent.filter(
+      (item) => !(item.date === session.date && item.dayId === session.dayId),
+    ),
+    sessionsCompleted: wasLogged
+      ? Math.max(0, athlete.sessionsCompleted - 1)
+      : athlete.sessionsCompleted,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function createSession(
   day: ProgramDay,
   date = formatDateISO(),
@@ -85,12 +150,14 @@ export function createSession(
 ): WorkoutSession {
   const seen = new Set(day.exercises.map((exercise) => exercise.id));
   const extraLifts = extras.filter((item) => !seen.has(item.exerciseId));
+  const startedAt = new Date().toISOString();
   return {
     date,
     dayId: day.id,
     title: day.title,
     status: "in_progress",
-    startedAt: new Date().toISOString(),
+    startedAt,
+    clockStartedAt: startedAt,
     timeOfDay: currentTimeOfDay(),
     feelingBefore: emptyFeeling(),
     exercises: [

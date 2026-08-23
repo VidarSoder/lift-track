@@ -36,7 +36,6 @@ import {
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
-import { DangerConfirm } from "@/components/danger-confirm";
 import { CardioRide } from "@/components/cardio-ride";
 import { SessionClock } from "@/components/session-clock";
 import { Stepper } from "@/components/stepper";
@@ -262,7 +261,6 @@ export function WorkoutSessionView() {
     todaySession,
     persistSession,
     setAthlete,
-    saveSessionProgress,
     completeSession,
     cancelSession,
   } = useTraining();
@@ -276,7 +274,6 @@ export function WorkoutSessionView() {
   const [afterOpen, setAfterOpen] = useState<boolean | undefined>(undefined);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelWipeOpen, setCancelWipeOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
   const [pendingExtras, setPendingExtras] = useState<PinnedExercise[]>([]);
@@ -545,7 +542,7 @@ export function WorkoutSessionView() {
               onClick={() => setCancelOpen(true)}
               className="text-sm text-muted-foreground underline"
             >
-              Cancel session
+              Dismiss session
             </button>
           ) : null}
         </div>
@@ -1341,26 +1338,15 @@ export function WorkoutSessionView() {
         <div className="space-y-2">
           <Button
             size="lg"
-            variant="outline"
-            className="h-12 w-full text-base"
-            onClick={() => {
-              saveSessionProgress(session);
-              toast.success("Progress saved. Session stays open.");
-            }}
-          >
-            Save progress
-          </Button>
-          <Button
-            size="lg"
             className="h-12 w-full text-base"
             onClick={() => requestFinish()}
           >
             Finish session
           </Button>
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {counts?.completedSets ?? 0} sets. Save progress keeps it open.
-            Finish asks how you feel after, then always saves. Cancel is only if
-            you want out.
+            {counts?.completedSets ?? 0} sets logged. Finish sends it to
+            Progress, even if you only did a little. Dismiss if this was not a
+            session.
           </p>
         </div>
       ) : (
@@ -1389,82 +1375,37 @@ export function WorkoutSessionView() {
         </div>
       )}
 
-      <DangerConfirm
-        open={cancelWipeOpen}
-        onOpenChange={setCancelWipeOpen}
-        title="Throw away today's kg?"
-        description="This drops the session and deletes today's last loads, lift history, and bike stats for this date. Older days stay."
-        confirmLabel="Delete today's progress"
-        onConfirm={() => {
-          cancelSession(session, false);
-          toast.success("Session removed.");
-          router.replace("/");
-        }}
-      />
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cancel this session?</DialogTitle>
+            <DialogTitle>Dismiss this session?</DialogTitle>
             <DialogDescription>
               {sessionHasProgress(session)
-                ? "Finish always saves. This is only if you want to drop the session. Default is keep the kg you already logged. Removing progress asks twice — that can wipe today’s last loads."
-                : "Nothing is saved yet. This just closes the session."}
+                ? "This will not show as a finished session on Progress. The kg you logged still come back the next time you do these lifts."
+                : "Nothing logged yet. This just closes the session."}
             </DialogDescription>
           </DialogHeader>
-          {sessionHasProgress(session) ? (
-            <div className="space-y-2">
-              <Button
-                className="h-11 w-full"
-                onClick={() => {
-                  cancelSession(session, true);
-                  setCancelOpen(false);
-                  toast.success("Session closed. Progress kept.");
-                  router.replace("/");
-                }}
-              >
-                Save progress and close
-              </Button>
-              <Button
-                variant="outline"
-                className="h-11 w-full"
-                onClick={() => {
-                  setCancelOpen(false);
-                  setCancelWipeOpen(true);
-                }}
-              >
-                Remove progress
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-11 w-full"
-                onClick={() => setCancelOpen(false)}
-              >
-                Keep training
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Button
-                variant="destructive"
-                className="h-11 w-full"
-                onClick={() => {
-                  cancelSession(session, false);
-                  setCancelOpen(false);
-                  toast.success("Session cancelled.");
-                  router.replace("/");
-                }}
-              >
-                Yes, cancel
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-11 w-full"
-                onClick={() => setCancelOpen(false)}
-              >
-                Keep training
-              </Button>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Button
+              variant="destructive"
+              className="h-11 w-full"
+              onClick={() => {
+                cancelSession(session, true);
+                setCancelOpen(false);
+                toast.success("Session dismissed.");
+                router.replace("/");
+              }}
+            >
+              Dismiss session
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-11 w-full"
+              onClick={() => setCancelOpen(false)}
+            >
+              Keep training
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

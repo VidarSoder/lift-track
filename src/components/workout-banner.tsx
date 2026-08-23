@@ -1,13 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateISO } from "@/lib/dates";
 import { isOpenSession } from "@/lib/active-session";
-import {
-  clearWorkoutClock,
-  startWorkoutClock,
-  stopWorkoutClock,
-} from "@/lib/session";
+import { startWorkoutClock, stopWorkoutClock } from "@/lib/session";
 import type { WorkoutSession } from "@/lib/types";
 import { SessionClock } from "@/components/session-clock";
 import { useTraining } from "@/components/training-provider";
@@ -17,10 +14,17 @@ export function WorkoutBanner() {
   const router = useRouter();
   const { todaySession, persistSession } = useTraining();
   const open = isOpenSession(todaySession, formatDateISO());
+
+  useEffect(() => {
+    if (!open || !todaySession?.startedAt) return;
+    if (todaySession.clockStartedAt || todaySession.clockEndedAt) return;
+    persistSession(startWorkoutClock(todaySession), { immediate: true });
+  }, [open, persistSession, todaySession]);
+
   if (!open || !todaySession) return null;
 
-  const started = Boolean(todaySession.clockStartedAt);
-  const running = started && !todaySession.clockEndedAt;
+  const startedAt = todaySession.clockStartedAt ?? todaySession.startedAt;
+  const running = !todaySession.clockEndedAt;
 
   function save(next: WorkoutSession) {
     persistSession(next, { immediate: true });
@@ -33,16 +37,12 @@ export function WorkoutBanner() {
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Workout
           </p>
-          {started ? (
-            <SessionClock
-              startedAt={todaySession.clockStartedAt!}
-              finishedAt={todaySession.clockEndedAt}
-              running={running}
-              className="text-sm font-semibold leading-tight"
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">Start when you begin</p>
-          )}
+          <SessionClock
+            startedAt={startedAt}
+            finishedAt={todaySession.clockEndedAt}
+            running={running}
+            className="text-sm font-semibold leading-tight"
+          />
         </div>
         {running ? (
           <Button
@@ -61,20 +61,9 @@ export function WorkoutBanner() {
             className="h-8 px-3"
             onClick={() => save(startWorkoutClock(todaySession))}
           >
-            {started ? "Resume" : "Start"}
+            Resume
           </Button>
         )}
-        {started && !running ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-8 px-3 text-muted-foreground"
-            onClick={() => save(clearWorkoutClock(todaySession))}
-          >
-            Clear
-          </Button>
-        ) : null}
         <Button
           type="button"
           size="sm"

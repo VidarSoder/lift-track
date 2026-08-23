@@ -6,15 +6,15 @@ Phone-first training log for Vidar. Today’s session, set-by-set weights, previ
 
 Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
 
-**Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document. History has a chart. Removing a weigh-in is behind Edit, then two confirms. Cancel session → Remove progress is the same two-step check, because that can wipe today’s last loads.
+**Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document. History has a chart. Removing a weigh-in is behind Edit, then two confirms.
 
 Every lift in a session has a **Warm-up set** button at the top of the set list. Tap it to add a lighter set (about half of last working kg, then it climbs). Warm-ups sit above the working sets, do not count as PRs or last load, and you can add more than one. Extra working sets stay on **Add a set**.
 
 Warm-up has one **Bike**, one **Run**, and one **Walk**. After you start, pick a visible prefill or set minutes and pace yourself. Walk uses the same minutes + km/h controls as a run. Sets, reps, and kg keep +/−, and you can tap the number to type or drag the slider.
 
-While a session is open, a thin **Workout** banner sits at the top. Start the clock when you begin, pause it, or End the session from there. A transparent timer button stays bottom-right: tap it to open the quick timer above, tap again to hide. Start with no time to count up, or add 0:30 / 1:00 and then Start to count down.
+While a session is open, a thin **Workout** banner sits at the top. The clock starts when you open the session. Pause, resume, or End from there. A transparent timer button stays bottom-right: tap it to open the quick timer above, tap again to hide. Start with no time to count up, or add 0:30 / 1:00 and then Start to count down.
 
-Pull down from the top of any page to refresh. Cancel an open session if you want out. If nothing was saved yet, that is one confirm. If you already logged sets, you can keep the kg or remove it (remove asks twice). Finish always saves.
+Pull down from the top of any page to refresh. Sets save as you log them. Finish sends the session to Progress, even if it was short. Dismiss closes it without counting as a finished session; the kg still come back next time. If you End or Finish too early, Progress has Reopen for 24 hours.
 
 ## Weekly plan
 
@@ -34,7 +34,7 @@ The schedule lives in `src/data/program.ts`.
 
 - `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` are server-only.
 - Firestore rules deny every client read and write.
-- The Admin SDK writes only the single athlete document and **today’s** session.
+- The Admin SDK writes only the single athlete document and the current session (today, or a session still open / reopenable within 24 hours).
 - Unlock attempts are rate-limited. Deletes are not exposed.
 
 I've set up prototype Security Rules to keep the data in Firestore safe. They are designed to be secure because the client SDK is locked out entirely and the server accepts writes only after a signed session cookie. However, you should review and verify them before broadly sharing your app. If you'd like, I can help you harden these rules.

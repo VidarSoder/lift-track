@@ -12,13 +12,12 @@ import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { upsertBikeStats } from "@/lib/bike";
 import { mergeLiftLog } from "@/lib/lifts";
-import { createAthlete, mergeLoads } from "@/lib/session";
-import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
+import { createAthlete, isLiveSession, mergeLoads } from "@/lib/session";
+import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, saveReopened, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
 
 function hydrateToday(session?: WorkoutSession) {
-  if (!session || session.status === "skipped") return undefined;
-  return session;
+  return isLiveSession(session) ? session : undefined;
 }
 
 type TrainingContextValue = {
@@ -36,6 +35,7 @@ type TrainingContextValue = {
   saveSessionProgress: (session: WorkoutSession) => void;
   completeSession: (session: WorkoutSession) => void;
   cancelSession: (session: WorkoutSession, keepProgress: boolean) => void;
+  reopenEndedSession: (session: WorkoutSession) => void;
   reload: () => Promise<void>;
   flush: () => Promise<void>;
 };
@@ -140,6 +140,15 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     [athlete],
   );
 
+  const reopenEndedSession = useCallback(
+    (session: WorkoutSession) => {
+      const bundle = saveReopened(athlete, session);
+      setAthleteState(bundle.athlete);
+      setTodaySessionState(bundle.today);
+    },
+    [athlete],
+  );
+
   const reload = useCallback(async () => {
     const bundle = await loadBundle();
     if (!bundle) return;
@@ -178,6 +187,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       saveSessionProgress,
       completeSession,
       cancelSession,
+      reopenEndedSession,
       reload,
       flush,
     }),
@@ -189,6 +199,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       reload,
       persistSession,
       ready,
+      reopenEndedSession,
       saveSessionProgress,
       setAthlete,
       setTodaySession,

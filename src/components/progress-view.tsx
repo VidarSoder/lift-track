@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
 import { resolveExercise } from "@/lib/exercises";
+import { canReopenSession } from "@/lib/session";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 import { WeightChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +47,8 @@ function Spark({ points }: { points: { weight: number }[] }) {
 }
 
 export function ProgressView() {
-  const { athlete } = useTraining();
+  const router = useRouter();
+  const { athlete, todaySession, reopenEndedSession } = useTraining();
   const [group, setGroup] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const body = latestWeight(athlete);
@@ -68,6 +71,11 @@ export function ProgressView() {
   const today = formatDateISO();
   const latest = athlete.recent[0];
   const latestIsToday = latest?.date === today;
+  const canReopen =
+    Boolean(todaySession) &&
+    canReopenSession(todaySession) &&
+    latest?.date === todaySession?.date &&
+    latest?.dayId === todaySession?.dayId;
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
       const exercise = resolveExercise(id, athlete);
@@ -109,6 +117,24 @@ export function ProgressView() {
                 Mood {latest.mood}/5
                 {latest.pump ? ` · pump ${latest.pump}/5` : ""}
               </p>
+            ) : null}
+            {canReopen && todaySession ? (
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() => {
+                    reopenEndedSession(todaySession);
+                    router.push("/workout");
+                  }}
+                >
+                  Reopen session
+                </Button>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Ended too soon? Reopen within 24 hours.
+                </p>
+              </div>
             ) : null}
           </CardContent>
         </Card>

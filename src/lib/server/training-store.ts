@@ -1,5 +1,5 @@
 import { formatDateISO } from "@/lib/dates";
-import { createAthlete } from "@/lib/session";
+import { createAthlete, isLiveSession } from "@/lib/session";
 import { athleteId } from "@/lib/server/secrets";
 import { adminDb } from "@/lib/server/firebase-admin";
 import type { AthleteDoc, CacheBundle, WorkoutSession } from "@/lib/types";
@@ -50,10 +50,14 @@ export async function loadTrainingState(): Promise<CacheBundle> {
   const athlete = snap.exists ? (snap.data() as AthleteDoc) : createAthlete(today);
 
   let todaySession: WorkoutSession | undefined;
-  if (athlete.lastSessionDate === today) {
-    const sessionSnap = await athleteRef.collection("sessions").doc(today).get();
+  const lastDate = athlete.lastSessionDate;
+  if (lastDate && DATE.test(lastDate)) {
+    const sessionSnap = await athleteRef.collection("sessions").doc(lastDate).get();
     if (sessionSnap.exists) {
-      todaySession = sessionSnap.data() as WorkoutSession;
+      const session = sessionSnap.data() as WorkoutSession;
+      if (isLiveSession(session, today)) {
+        todaySession = session;
+      }
     }
   }
 
@@ -67,8 +71,14 @@ export async function saveTrainingState(bundle: CacheBundle) {
   if (bundle.today && !isSession(bundle.today)) {
     throw new Error("Invalid session payload");
   }
-  if (bundle.today && bundle.today.date !== formatDateISO()) {
-    throw new Error("Only today's session can be written");
+  const today = formatDateISO();
+  if (
+    bundle.today &&
+    bundle.today.date !== today &&
+    bundle.athlete.lastSessionDate !== bundle.today.date &&
+    !isLiveSession(bundle.today, today)
+  ) {
+    throw new Error("Only the current session can be written");
   }
 
   const id = await athleteId();
