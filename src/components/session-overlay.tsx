@@ -157,15 +157,13 @@ function SessionOverlayInner() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md"
+      className="pointer-events-none fixed inset-x-0 z-30 mx-auto max-w-md bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
       aria-live="polite"
     >
-      <div
-        className="pointer-events-auto flex flex-col items-end gap-2 px-3 pb-[calc(3.25rem+env(safe-area-inset-bottom,0px))]"
-      >
+      <div className="flex flex-col items-end gap-2 px-3">
         {!state.hidden ? (
           <div
-            className="w-full max-w-[min(100%,20rem)] rounded-2xl border border-border/80 bg-card/95 p-3 shadow-lg backdrop-blur-md"
+            className="pointer-events-auto w-full max-w-[min(100%,20rem)] rounded-2xl border border-border/80 bg-card/95 p-3 shadow-lg backdrop-blur-md"
           >
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -240,7 +238,7 @@ function SessionOverlayInner() {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-end gap-2">
+        <div className="pointer-events-auto flex items-center justify-end gap-2">
           {!onActivePage ? (
             <Link
               href="/workout"
