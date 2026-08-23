@@ -143,31 +143,10 @@ export function SessionTimer() {
 
   const label = formatTimer(remaining);
 
-  if (state.hidden) {
-    return (
-      <div className="flex shrink-0 justify-end border-t border-border/60 bg-background px-3 py-1.5">
-        <button
-          type="button"
-          onClick={() => patch({ ...state, hidden: false })}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums",
-            state.running
-              ? "bg-primary text-primary-foreground"
-              : done
-                ? "bg-primary/20 text-primary"
-                : "bg-secondary text-secondary-foreground",
-          )}
-          aria-label={`Open timer ${label}`}
-        >
-          <Timer className="size-3.5" />
-          {idle ? "Timer" : label}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="shrink-0 border-t border-border/60 bg-background px-3 py-2.5">
+    <div className="shrink-0 bg-transparent">
+      {state.hidden ? null : (
+        <div className="border-t border-border/60 bg-background/95 px-3 py-2.5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -182,13 +161,6 @@ export function SessionTimer() {
             {label}
           </p>
         </div>
-        <button
-          type="button"
-          className="h-9 rounded-full px-3 text-sm text-muted-foreground"
-          onClick={() => patch({ ...state, hidden: true })}
-        >
-          Hide
-        </button>
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -244,6 +216,26 @@ export function SessionTimer() {
         >
           Clear
         </Button>
+      </div>
+        </div>
+      )}
+      <div className="flex justify-end bg-transparent px-3 py-2">
+        <button
+          type="button"
+          onClick={() => patch({ ...state, hidden: !state.hidden })}
+          className={cn(
+            "inline-flex size-16 flex-col items-center justify-center gap-0.5 rounded-full border border-primary/45 bg-transparent text-primary",
+            !state.hidden && "border-primary",
+            state.running && "border-primary text-primary",
+          )}
+          aria-expanded={!state.hidden}
+          aria-label={state.hidden ? `Open timer ${label}` : "Hide timer"}
+        >
+          <Timer className="size-6" />
+          <span className="text-[11px] font-semibold tabular-nums leading-none">
+            {idle ? "Timer" : label}
+          </span>
+        </button>
       </div>
     </div>
   );
