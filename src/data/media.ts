@@ -39,6 +39,9 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "pushdown-fri": { slug: "Triceps_Pushdown", youtube: "nlDC_nk2YI0" },
   "zone2-walk": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
   "arm-care": { slug: "External_Rotation", youtube: "JyDFNGQQdvw" },
+  "walk-easy-10": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
+  "walk-easy-30": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
+  "arms-mobility": { slug: "External_Rotation", youtube: "JyDFNGQQdvw" },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {

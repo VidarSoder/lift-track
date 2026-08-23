@@ -19,7 +19,7 @@ Pull down from the top of any page to refresh. Cancel an open session if you wan
 | Wed | Legs · second workout |
 | Thu | Arms · Get Huge Arms day |
 | Fri | Shoulders + arm pump |
-| Sat | Optional walk + mobility |
+| Sat | Warm-up · walk, run, bike, or mobility |
 | Sun | Rest |
 
 The schedule lives in `src/data/program.ts`.

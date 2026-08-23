@@ -57,6 +57,31 @@ export const WARMUP_PRESETS: WarmupPreset[] = [
       { minutes: 2, pace: "4.5 km/h walk" },
     ],
   },
+  {
+    id: "walk-easy-10",
+    kind: "walk",
+    title: "Easy 10 minutes",
+    detail: "Before a lift, or when you only have a little time",
+    steps: [{ minutes: 10, pace: "5.5 km/h" }],
+  },
+  {
+    id: "walk-easy-30",
+    kind: "walk",
+    title: "Easy 30 minutes",
+    detail: "The old Saturday walk. Speak in full sentences.",
+    steps: [{ minutes: 30, pace: "5.5 km/h" }],
+  },
+  {
+    id: "arms-mobility",
+    kind: "mobility",
+    title: "Elbows and shoulders",
+    detail: "Band work, pain-free. Feeding the joints, not training them.",
+    steps: [
+      { minutes: 2, pace: "Band external rotations" },
+      { minutes: 2, pace: "Straight-arm band pushdowns" },
+      { minutes: 2, pace: "Easy biceps stretch" },
+    ],
+  },
 ];
 
 export function warmupById(id: string) {
@@ -72,7 +97,10 @@ export function warmupMinutes(preset: WarmupPreset) {
 }
 
 export function warmupLabel(kind: WarmupKind) {
-  return kind === "bike" ? "Bike" : "Run";
+  if (kind === "bike") return "Bike";
+  if (kind === "run") return "Run";
+  if (kind === "walk") return "Walk";
+  return "Mobility";
 }
 
 export function firstNumber(value: string) {
@@ -86,6 +114,12 @@ export function cardioUnits(group: string) {
   }
   if (group === "Bike") {
     return { load: "lvl", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 5 };
+  }
+  if (group === "Walk") {
+    return { load: "km/h", work: "min", loadStep: 0.5, workStep: 1, fallbackLoad: 5.5 };
+  }
+  if (group === "Mobility") {
+    return { load: "rpe", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 3 };
   }
   return { load: "kg", work: "reps", loadStep: 2.5, workStep: 1, fallbackLoad: 20 };
 }

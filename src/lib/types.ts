@@ -53,7 +53,7 @@ export type ProgramDay = {
   exercises: Exercise[];
 };
 
-export type WarmupKind = "bike" | "run";
+export type WarmupKind = "bike" | "run" | "walk" | "mobility";
 
 export type WarmupStep = {
   minutes: number;

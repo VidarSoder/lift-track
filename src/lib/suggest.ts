@@ -33,7 +33,6 @@ export function suggestWorkout(athlete: AthleteDoc) {
     if (upperHeavy && day.id === "legs") score += 8;
     if (upperHeavy && day.id === "pull") score += 5;
     if (lastTwo[0] === day.id) score -= 6;
-    if (day.id === "optional") score -= 2;
     if (day.id === "warmup") score -= 8;
     return { day, age, score };
   }).sort((a, b) => b.score - a.score);

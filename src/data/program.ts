@@ -1,4 +1,4 @@
-import { WARMUP_PRESETS } from "@/data/warmup";
+import { WARMUP_PRESETS, warmupLabel } from "@/data/warmup";
 import type { Exercise, ProgramDay, Weekday } from "@/lib/types";
 
 export const ATHLETE_NAME = "Vidar";
@@ -567,68 +567,40 @@ export const DAYS: ProgramDay[] = [
     ],
   },
   {
-    id: "optional",
-    weekday: "saturday",
-    title: "Optional · walk + arms mobility",
-    source: "Recovery from both PDFs",
-    focus: "Zone-2 movement and elbow/shoulder care so Monday’s press is crisp.",
-    durationMin: "30–45",
-    warmup: ["Easy nasal-breathing walk to start"],
-    coaching:
-      "Do not sneak in another curl session. The arms grew this week from Thursday and the extra work on push/pull. Today is blood flow and food.",
-    exercises: [
-      {
-        id: "zone2-walk",
-        name: "Zone-2 walk or easy bike",
-        group: "Conditioning",
-        sets: 1,
-        reps: "30–40 min",
-        restSec: 0,
-        equipment: "Outdoors or bike",
-        setup:
-          "You should be able to speak in full sentences. Heart rate roughly 60–70% max.",
-        how: "Keep a steady pace. If you sit all week, this is the session that makes the lifting recover.",
-        mistakes: "Turning it into intervals.",
-        progress: "Add 5 minutes before you add intensity.",
-      },
-      {
-        id: "arm-care",
-        name: "Elbow and shoulder circuit",
-        group: "Mobility",
-        sets: 2,
-        reps: "10 each",
-        restSec: 30,
-        equipment: "Light band",
-        setup:
-          "Band external rotations, straight-arm band pushdowns, and gentle biceps stretch on a wall or rack.",
-        how: "Pain-free range only. You are feeding the joints, not training them.",
-        mistakes: "Forcing a stretch into a sharp elbow pinch.",
-        progress: "Consistency beats intensity.",
-      },
-    ],
-  },
-  {
     id: "warmup",
-    weekday: "sunday",
-    title: "Warm-up · run or bike",
+    weekday: "saturday",
+    title: "Warm-up · walk, run, bike",
     source: "Easy start, any day",
-    focus: "Pick a treadmill or bike version. Do one, or a few, then lift later if you want.",
-    durationMin: "8–12",
+    focus: "Walk, treadmill, bike, or the elbow-and-shoulder circuit. Do one, or a few, then lift later if you want.",
+    durationMin: "8–40",
     warmup: [],
     coaching:
-      "This is its own session. Finish it and you can still start Push, Arms, or whatever else the same day. Keep it easy enough that the first working set still feels sharp.",
+      "This is its own session. The Saturday walk and arm-care live here now — pick a walk or the mobility circuit the same way you pick a bike. Finish it and you can still start Push, Arms, or whatever else the same day.",
     exercises: WARMUP_PRESETS.map((preset) => ({
       id: preset.id,
-      name: `${preset.kind === "run" ? "Run" : "Bike"} · ${preset.title}`,
-      group: preset.kind === "run" ? "Run" : "Bike",
+      name: `${warmupLabel(preset.kind)} · ${preset.title}`,
+      group: warmupLabel(preset.kind),
       sets: preset.steps.length,
       reps: preset.steps.map((step) => `${step.minutes} min`).join(" + "),
       restSec: 0,
-      equipment: preset.kind === "run" ? "Treadmill" : "Exercise bike",
+      equipment:
+        preset.kind === "run"
+          ? "Treadmill"
+          : preset.kind === "bike"
+            ? "Exercise bike"
+            : preset.kind === "walk"
+              ? "Outdoors or treadmill"
+              : "Light band",
       setup: preset.detail,
       how: preset.steps.map((step) => `${step.minutes} min at ${step.pace}`).join(". Then "),
-      mistakes: "Turning the warm-up into the workout.",
-      progress: "Same pace is fine. Add a minute before you add speed.",
+      mistakes:
+        preset.kind === "mobility"
+          ? "Forcing a stretch into a sharp elbow pinch."
+          : "Turning the warm-up into the workout.",
+      progress:
+        preset.kind === "mobility"
+          ? "Consistency beats intensity."
+          : "Same pace is fine. Add a minute before you add speed.",
     })),
   },
   {

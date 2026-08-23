@@ -344,7 +344,7 @@ export function WorkoutSessionView() {
             </header>
             <p className="text-sm leading-6 text-muted-foreground">
               {day.id === "warmup"
-                ? "This is its own session. Do a run or bike version, add extras if you want, then start a lift later the same day."
+                ? "This is its own session. Walk, run, bike, or the arm-care circuit. Add extras if you want, then start a lift later the same day."
                 : "Still photos and last kg on the list. Tap a row for the GIF on this page, then Back."}
             </p>
             <WorkoutExercisePreview
