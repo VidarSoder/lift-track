@@ -273,13 +273,13 @@ export function ProgressView() {
           )}
           {weighIns.length > 0 ? <WeightChart entries={weighIns} /> : null}
           <Link
-            href="/settings"
+            href="/settings/weight"
             className={buttonVariants({
               variant: "secondary",
               className: "w-full",
             })}
           >
-            Open settings
+            Open weigh-ins
           </Link>
         </CardContent>
       </Card>

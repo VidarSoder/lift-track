@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, Flame, Plus, X } from "lucide-react";
+import { ChevronLeft, Check, ChevronDown, Flame, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";

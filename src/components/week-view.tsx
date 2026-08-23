@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, X } from "lucide-react";
+import { ChevronLeft, Search, X } from "lucide-react";
 import { matchesExerciseQuery } from "@/data/exercise-tags";
 import { exercisesByMuscle } from "@/data/program";
 import { formatDateISO } from "@/lib/dates";
@@ -96,6 +96,14 @@ export function WeekView() {
 
       {selected ? (
         <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            className="-ml-1 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"
+          >
+            <ChevronLeft className="size-4" />
+            All lifts
+          </button>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <ExerciseMark id={selected.id} />
