@@ -157,7 +157,7 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "pushdown-arms": { icon: Diamond, tone: TONES.dusk },
   "spider-curl": { icon: GitCommitHorizontal, tone: TONES.ink },
   "lateral-raise": { icon: MoveDiagonal2, tone: TONES.sand },
-  "rear-delt-fly": { icon: FlipHorizontal2, tone: TONES.fog },
+  "chest-supported-row": { icon: FlipHorizontal2, tone: TONES.fog },
   "cable-curl-fri": { icon: Link2, tone: TONES.blush },
   "pushdown-fri": { icon: Crosshair, tone: TONES.dusk },
   "zone2-walk": { icon: Route, tone: TONES.moss },

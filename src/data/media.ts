@@ -34,7 +34,7 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "pushdown-arms": { slug: "Triceps_Pushdown", youtube: "nlDC_nk2YI0" },
   "spider-curl": { slug: "Spider_Curl", youtube: "keM0QW5x7eE" },
   "lateral-raise": { slug: "Side_Lateral_Raise", youtube: "3VcKaXpzqRo" },
-  "rear-delt-fly": { slug: "Cable_Rear_Delt_Fly", youtube: "EA382m5q_pI" },
+  "chest-supported-row": { slug: "Incline_Bench_Pull", youtube: "0G2_XV7sl0Q" },
   "cable-curl-fri": { slug: "Standing_Biceps_Cable_Curl", youtube: "N6R5tYbYKg8" },
   "pushdown-fri": { slug: "Triceps_Pushdown", youtube: "nlDC_nk2YI0" },
   "zone2-walk": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
