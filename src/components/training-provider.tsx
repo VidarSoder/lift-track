@@ -10,6 +10,7 @@ import {
 } from "react";
 import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
+import { upsertBikeStats } from "@/lib/bike";
 import { createAthlete, mergeLoads } from "@/lib/session";
 import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
@@ -89,13 +90,24 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     ) => {
       setTodaySessionState(session);
       const base = options?.athlete ?? athlete;
-      const nextAthlete = {
-        ...base,
-        lastSessionDate: session.date,
-        lastSessionStatus: session.status,
-        lastLoads: mergeLoads(base.lastLoads, session),
-        updatedAt: session.updatedAt,
-      };
+      const nextAthlete = session.bikeStats
+        ? upsertBikeStats(
+            {
+              ...base,
+              lastSessionDate: session.date,
+              lastSessionStatus: session.status,
+              lastLoads: mergeLoads(base.lastLoads, session),
+              updatedAt: session.updatedAt,
+            },
+            { ...session.bikeStats, date: session.date },
+          )
+        : {
+            ...base,
+            lastSessionDate: session.date,
+            lastSessionStatus: session.status,
+            lastLoads: mergeLoads(base.lastLoads, session),
+            updatedAt: session.updatedAt,
+          };
       setAthleteState(nextAthlete);
       const bundle = { athlete: nextAthlete, today: session };
       if (options?.immediate) void saveNow(bundle);

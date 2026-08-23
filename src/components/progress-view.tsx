@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { DAYS } from "@/data/program";
+import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
+import { formatNiceDate } from "@/lib/dates";
 import { latestWeight, weightDelta } from "@/lib/weight";
 import { useTraining } from "@/components/training-provider";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,6 +22,13 @@ export function ProgressView() {
   const { athlete } = useTraining();
   const body = latestWeight(athlete);
   const delta = weightDelta(athlete);
+  const bikes = bikeLog(athlete);
+  const lastBike = latestBike(athlete);
+  const bikeChange = bikeDelta(athlete);
+  const maxBike = Math.max(
+    1,
+    ...bikes.map((item) => item.km ?? item.minutes / 10),
+  );
   const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
@@ -90,6 +99,63 @@ export function ProgressView() {
           >
             Open settings
           </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <p className="text-xs text-muted-foreground">Bike</p>
+          {lastBike ? (
+            <>
+              <p className="text-base font-medium leading-6">
+                {formatBikeLine(lastBike)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {formatNiceDate(lastBike.date)}
+                {bikeChange && lastBike.km != null
+                  ? ` · ${bikeChange.km > 0 ? "+" : ""}${bikeChange.km} km since the first ride`
+                  : bikeChange
+                    ? ` · ${bikeChange.minutes > 0 ? "+" : ""}${bikeChange.minutes} min since the first ride`
+                    : ""}
+              </p>
+              {bikes.length >= 2 ? (
+                <div className="flex h-20 items-end gap-1">
+                  {[...bikes].reverse().slice(-12).map((item) => {
+                    const value = item.km ?? item.minutes / 10;
+                    const height = 20 + (value / maxBike) * 80;
+                    return (
+                      <div
+                        key={item.date}
+                        className="flex-1 rounded-t-sm bg-primary/70"
+                        style={{ height: `${height}%` }}
+                        title={formatBikeLine(item)}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                {bikes.slice(0, 6).map((item) => (
+                  <div
+                    key={item.date}
+                    className="flex items-start justify-between gap-3 text-sm"
+                  >
+                    <p className="text-muted-foreground">
+                      {formatNiceDate(item.date)}
+                    </p>
+                    <p className="text-right font-medium leading-5">
+                      {formatBikeLine(item)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              After a bike, type time, km, kcal, and level from the console.
+              That history shows up here.
+            </p>
+          )}
         </CardContent>
       </Card>
 

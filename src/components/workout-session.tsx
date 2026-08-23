@@ -28,6 +28,7 @@ import {
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
+import { BikeStatsCard } from "@/components/bike-stats";
 import { WarmupCard } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
@@ -444,6 +445,21 @@ export function WorkoutSessionView() {
 
   if (!session || !day) return null;
 
+  const bikeMinutes = session.exercises.reduce((sum, logged) => {
+    const exercise = resolveExercise(logged.exerciseId, athlete, logged.sets.length);
+    if (exercise.group !== "Bike" && warmupById(logged.exerciseId)?.kind !== "bike") {
+      return sum;
+    }
+    return (
+      sum +
+      logged.sets.reduce((inner, set) => inner + (set.done && set.reps ? set.reps : 0), 0)
+    );
+  }, 0);
+  const hasBike = session.exercises.some((logged) => {
+    const exercise = resolveExercise(logged.exerciseId, athlete, logged.sets.length);
+    return exercise.group === "Bike" || warmupById(logged.exerciseId)?.kind === "bike";
+  });
+
   return (
     <div className="space-y-5 pb-4">
       <header className="space-y-2">
@@ -822,6 +838,15 @@ export function WorkoutSessionView() {
           </Card>
         );
       })}
+
+      {hasBike ? (
+        <BikeStatsCard
+          date={session.date}
+          stats={session.bikeStats}
+          minutesGuess={bikeMinutes || undefined}
+          onSave={(bikeStats) => patch({ ...session, bikeStats }, true)}
+        />
+      ) : null}
 
       {session.status !== "completed" ? (
         <AddExerciseButton

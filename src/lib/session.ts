@@ -1,3 +1,4 @@
+import { upsertBikeStats } from "@/lib/bike";
 import { ATHLETE_NAME } from "@/data/program";
 import { currentTimeOfDay, formatDateISO } from "@/lib/dates";
 import type {
@@ -68,6 +69,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     lastByDay: {},
     lastLoads: {},
     bodyWeight: [],
+    bikeLog: [],
     customExercises: [],
     pinnedByDay: {},
     prs: {},
@@ -151,6 +153,7 @@ export function stripTodaysProgress(athlete: AthleteDoc, today: string) {
     ...athlete,
     lastLoads,
     lastByDay,
+    bikeLog: (athlete.bikeLog ?? []).filter((item) => item.date !== today),
     lastSessionStatus: "skipped" as const,
     updatedAt: new Date().toISOString(),
   } satisfies AthleteDoc;
@@ -178,7 +181,7 @@ export function cancelWorkout(
 }
 
 export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
-  return {
+  const next = {
     ...athlete,
     lastSessionDate: session.date,
     lastSessionStatus: session.status,
@@ -192,6 +195,9 @@ export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
     lastLoads: mergeLoads(athlete.lastLoads, session),
     updatedAt: new Date().toISOString(),
   } satisfies AthleteDoc;
+  return session.bikeStats
+    ? upsertBikeStats(next, { ...session.bikeStats, date: session.date })
+    : next;
 }
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {
@@ -233,7 +239,7 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
           : 1
       : athlete.streak;
 
-  return {
+  const next = {
     ...athlete,
     lastSessionDate: session.date,
     lastSessionStatus: session.status,
@@ -254,6 +260,9 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
     streak,
     updatedAt: new Date().toISOString(),
   } satisfies AthleteDoc;
+  return session.bikeStats
+    ? upsertBikeStats(next, { ...session.bikeStats, date: session.date })
+    : next;
 }
 
 export function previousSets(athlete: AthleteDoc, dayId: DayKind, exerciseId: string) {

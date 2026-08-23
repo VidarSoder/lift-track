@@ -130,6 +130,7 @@ export type WorkoutSession = {
   feelingBeforeSaved?: boolean;
   feelingAfterSaved?: boolean;
   warmup?: WarmupLog;
+  bikeStats?: BikeStats;
   exercises: SessionExercise[];
   updatedAt: string;
 };
@@ -165,6 +166,15 @@ export type BodyWeight = {
   kg: number;
 };
 
+export type BikeStats = {
+  date: string;
+  minutes: number;
+  km?: number;
+  kcal?: number;
+  level?: number;
+  rpm?: number;
+};
+
 export type AthleteDoc = {
   name: string;
   timezone: string;
@@ -174,6 +184,7 @@ export type AthleteDoc = {
   lastByDay: Partial<Record<DayKind, { date: string; sets: LastSets }>>;
   lastLoads?: Record<string, LastLoad>;
   bodyWeight?: BodyWeight[];
+  bikeLog?: BikeStats[];
   customExercises?: CustomExercise[];
   pinnedByDay?: Partial<Record<DayKind, PinnedExercise[]>>;
   prs: Record<string, PersonalRecord>;
