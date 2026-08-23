@@ -13,35 +13,14 @@ import {
   weightDelta,
   weightLog,
 } from "@/lib/weight";
+import { DangerConfirm } from "@/components/danger-confirm";
+import { WeightChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-
-function WeightBars({ entries }: { entries: { date: string; kg: number }[] }) {
-  const chronological = [...entries].reverse();
-  const min = Math.min(...chronological.map((item) => item.kg));
-  const max = Math.max(...chronological.map((item) => item.kg));
-  const span = Math.max(0.4, max - min);
-
-  return (
-    <div className="flex h-24 items-end gap-1">
-      {chronological.map((item) => {
-        const height = 20 + ((item.kg - min) / span) * 80;
-        return (
-          <div
-            key={item.date}
-            className="flex-1 rounded-t-sm bg-primary/70"
-            style={{ height: `${height}%` }}
-            title={`${item.date}: ${item.kg} kg`}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 export function SettingsView() {
   const { athlete, setAthlete } = useTraining();
@@ -52,6 +31,11 @@ export function SettingsView() {
   const [typedKg, setTypedKg] = useState<string | null>(null);
   const [date, setDate] = useState(formatDateISO());
   const [start, setStart] = useState(athlete.programStartDate);
+  const [editingHistory, setEditingHistory] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<{
+    date: string;
+    kg: number;
+  } | null>(null);
   const slider = weighInSliderBounds(kg);
 
   function saveWeight() {
@@ -94,8 +78,6 @@ export function SettingsView() {
               </p>
             )}
           </div>
-
-          {log.length >= 2 ? <WeightBars entries={log.slice(0, 16)} /> : null}
 
           <div className="space-y-3">
             <Label htmlFor="kg">New weigh-in</Label>
@@ -160,39 +142,89 @@ export function SettingsView() {
 
       <Card>
         <CardContent className="space-y-3 pt-5">
-          <p className="text-base font-medium">History</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-base font-medium">History</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Chart first. Removing a weigh-in takes two confirms so a
+                stray tap cannot wipe it.
+              </p>
+            </div>
+            {log.length > 0 ? (
+              <Button
+                type="button"
+                variant={editingHistory ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setEditingHistory((open) => !open)}
+              >
+                {editingHistory ? "Done" : "Edit"}
+              </Button>
+            ) : null}
+          </div>
           {log.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nothing logged yet. Same date twice replaces that day.
             </p>
           ) : (
-            log.map((item) => (
-              <div
-                key={item.date}
-                className="flex items-center justify-between gap-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium">{item.kg.toFixed(1)} kg</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatNiceDate(item.date)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground underline"
-                  onClick={() =>
-                    setAthlete(removeBodyWeight(athlete, item.date), {
-                      immediate: true,
-                    })
-                  }
+            <>
+              <WeightChart entries={log} />
+              {log.map((item) => (
+                <div
+                  key={item.date}
+                  className="flex items-center justify-between gap-3 text-sm"
                 >
-                  Remove
-                </button>
-              </div>
-            ))
+                  <div>
+                    <p className="font-medium">{item.kg.toFixed(1)} kg</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatNiceDate(item.date)}
+                    </p>
+                  </div>
+                  {editingHistory ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={() =>
+                        setPendingRemove({ date: item.date, kg: item.kg })
+                      }
+                    >
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </>
           )}
         </CardContent>
       </Card>
+
+      <DangerConfirm
+        open={pendingRemove != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemove(null);
+        }}
+        title={
+          pendingRemove
+            ? `Remove ${pendingRemove.kg.toFixed(1)} kg?`
+            : "Remove weigh-in?"
+        }
+        description={
+          pendingRemove
+            ? `This deletes the ${pendingRemove.kg.toFixed(1)} kg weigh-in from ${formatNiceDate(pendingRemove.date)}. The rest of the history stays.`
+            : "This deletes that weigh-in from your history."
+        }
+        confirmLabel="Delete weigh-in"
+        onConfirm={() => {
+          if (!pendingRemove) return;
+          setAthlete(removeBodyWeight(athlete, pendingRemove.date), {
+            immediate: true,
+          });
+          toast.success("Weigh-in removed");
+          setPendingRemove(null);
+          if (log.length <= 1) setEditingHistory(false);
+        }}
+      />
 
       <Card>
         <CardContent className="space-y-3 pt-5">

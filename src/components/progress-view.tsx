@@ -7,7 +7,8 @@ import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatNiceDate } from "@/lib/dates";
 import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
 import { resolveExercise } from "@/lib/exercises";
-import { latestWeight, weightDelta } from "@/lib/weight";
+import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
+import { WeightChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export function ProgressView() {
   const [group, setGroup] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const body = latestWeight(athlete);
+  const weighIns = weightLog(athlete);
   const delta = weightDelta(athlete);
   const bikes = bikeLog(athlete);
   const lastBike = latestBike(athlete);
@@ -200,7 +202,7 @@ export function ProgressView() {
       </Card>
 
       <Card>
-        <CardContent className="space-y-2 pt-5">
+        <CardContent className="space-y-3 pt-5">
           <p className="text-xs text-muted-foreground">Body weight</p>
           <p className="text-2xl font-semibold">
             {body ? `${body.kg.toFixed(1)} kg` : "Not logged"}
@@ -215,6 +217,7 @@ export function ProgressView() {
               Add weigh-ins in Settings to see the trend.
             </p>
           )}
+          {weighIns.length > 0 ? <WeightChart entries={weighIns} /> : null}
           <Link
             href="/settings"
             className={buttonVariants({

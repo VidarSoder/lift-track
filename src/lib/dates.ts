@@ -28,6 +28,16 @@ export function weekdayOf(date = nowInZone()): Weekday {
   return WEEKDAYS[date.getDay()];
 }
 
+export function formatChartDate(iso: string, timeZone = TIMEZONE) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12));
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone,
+  }).format(date);
+}
+
 export function formatNiceDate(iso: string, timeZone = TIMEZONE) {
   const [y, m, d] = iso.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d, 12));

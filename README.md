@@ -6,7 +6,7 @@ Phone-first training log for Vidar. Today’s session, set-by-set weights, previ
 
 Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
 
-**Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document.
+**Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document. History has a chart. Removing a weigh-in is behind Edit, then two confirms. Cancel session → Remove progress is the same two-step check, because that can wipe today’s last loads.
 
 Pull down from the top of any page to refresh. Cancel an open session if you want out — save the kg (default) or remove it. Finish always saves.
 

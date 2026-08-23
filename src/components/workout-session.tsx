@@ -28,6 +28,7 @@ import {
   WorkoutExercisePreview,
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
+import { DangerConfirm } from "@/components/danger-confirm";
 import { BikeStatsCard } from "@/components/bike-stats";
 import { WarmupCard } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
@@ -105,12 +106,14 @@ function SetRow({
     (units.only === "work" ? units.fallbackLoad : units.work === "min" ? 6 : 8);
   const durationOnly = units.only === "work";
   const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const confirmTimer = useRef<number | null>(null);
 
   function cancelClear() {
     if (confirmTimer.current) window.clearTimeout(confirmTimer.current);
     confirmTimer.current = null;
     setConfirmClear(false);
+    setConfirmRemove(false);
   }
 
   function requestClear() {
@@ -188,11 +191,35 @@ function SetRow({
         {extra && onRemove ? (
           <button
             type="button"
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground"
-            aria-label={`Remove extra set ${index + 1}`}
-            onClick={onRemove}
+            className={cn(
+              "grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground",
+              confirmRemove && "bg-destructive/15 text-destructive",
+            )}
+            aria-label={
+              confirmRemove
+                ? `Tap again to remove extra set ${index + 1}`
+                : `Remove extra set ${index + 1}`
+            }
+            onClick={() => {
+              if (!confirmRemove) {
+                setConfirmRemove(true);
+                setConfirmClear(false);
+                if (confirmTimer.current) window.clearTimeout(confirmTimer.current);
+                confirmTimer.current = window.setTimeout(() => {
+                  setConfirmRemove(false);
+                  confirmTimer.current = null;
+                }, 2500);
+                return;
+              }
+              cancelClear();
+              onRemove();
+            }}
           >
-            <X className="size-4" />
+            {confirmRemove ? (
+              <span className="text-[10px] font-medium">Again</span>
+            ) : (
+              <X className="size-4" />
+            )}
           </button>
         ) : null}
       </div>
@@ -255,6 +282,7 @@ export function WorkoutSessionView() {
   const [afterOpen, setAfterOpen] = useState<boolean | undefined>(undefined);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelWipeOpen, setCancelWipeOpen] = useState(false);
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
   const [pendingExtras, setPendingExtras] = useState<PinnedExercise[]>([]);
@@ -1075,13 +1103,26 @@ export function WorkoutSessionView() {
         </div>
       )}
 
+      <DangerConfirm
+        open={cancelWipeOpen}
+        onOpenChange={setCancelWipeOpen}
+        title="Throw away today's kg?"
+        description="This drops the session and deletes today's last loads, lift history, and bike stats for this date. Older days stay."
+        confirmLabel="Delete today's progress"
+        onConfirm={() => {
+          cancelSession(session, false);
+          toast.success("Session removed.");
+          router.replace("/");
+        }}
+      />
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Cancel this session?</DialogTitle>
             <DialogDescription>
               Finish always saves. This is only if you want to drop the session.
-              Default is keep the kg you already logged.
+              Default is keep the kg you already logged. Removing progress asks
+              twice — that can wipe today’s last loads.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -1100,10 +1141,8 @@ export function WorkoutSessionView() {
               variant="outline"
               className="h-11 w-full"
               onClick={() => {
-                cancelSession(session, false);
                 setCancelOpen(false);
-                toast.success("Session removed.");
-                router.replace("/");
+                setCancelWipeOpen(true);
               }}
             >
               Remove progress
