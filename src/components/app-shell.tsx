@@ -1,11 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, Images, Settings, TrendingUp } from "lucide-react";
-import { ActiveSessionFab } from "@/components/active-session-fab";
-import { SessionTimer } from "@/components/session-timer";
+import { SessionOverlay } from "@/components/session-overlay";
 import { WorkoutBanner } from "@/components/workout-banner";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { formatDateISO } from "@/lib/dates";
@@ -41,10 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </PullToRefresh>
-      <Suspense fallback={null}>
-        <ActiveSessionFab />
-      </Suspense>
-      <SessionTimer />
+      <SessionOverlay />
       <nav className="app-nav mt-auto shrink-0 border-t border-border/80 bg-background px-2 pt-1.5">
         <ul className="grid grid-cols-5 gap-1">
           {LINKS.map((link) => {
