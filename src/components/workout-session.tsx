@@ -360,6 +360,7 @@ export function WorkoutSessionView() {
     };
     completeSession(finished);
     toast.success("Session finished.");
+    router.replace("/progress");
   }
 
   function requestFinish(current = session) {

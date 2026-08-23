@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
-import { formatNiceDate } from "@/lib/dates";
+import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
 import { resolveExercise } from "@/lib/exercises";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
@@ -65,6 +65,9 @@ export function ProgressView() {
     [lifts],
   );
   const visible = lifts.filter((item) => group === "all" || item.group === group);
+  const today = formatDateISO();
+  const latest = athlete.recent[0];
+  const latestIsToday = latest?.date === today;
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
       const exercise = resolveExercise(id, athlete);
@@ -81,10 +84,35 @@ export function ProgressView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Progress</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Every set you save keeps a history for that lift. Filter to what you
-          actually do and watch the load over time.
+          {latestIsToday
+            ? "Today’s session is at the top. The lifts below keep the longer history."
+            : "Every set you save keeps a history for that lift. Filter to what you actually do and watch the load over time."}
         </p>
       </header>
+
+      {latest ? (
+        <Card className="border-primary/25 bg-primary/8">
+          <CardContent className="space-y-2 pt-5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              {latestIsToday ? "Today" : "Latest session"}
+            </p>
+            <p className="font-heading text-2xl leading-none tracking-tight">
+              {latest.title.split("·")[0].trim()}
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {formatNiceDate(latest.date)} · {latest.durationMin} min ·{" "}
+              {latest.completedSets}/{latest.plannedSets} sets
+              {latest.volume > 0 ? ` · ${latest.volume} kg` : ""}
+            </p>
+            {latest.mood ? (
+              <p className="text-sm text-muted-foreground">
+                Mood {latest.mood}/5
+                {latest.pump ? ` · pump ${latest.pump}/5` : ""}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-3 gap-2">
         <Card>
@@ -297,10 +325,14 @@ export function ProgressView() {
               Finish a session and the bar chart shows up here.
             </p>
           ) : (
-            athlete.recent.map((item) => (
-              <div key={`${item.date}-${item.dayId}`} className="space-y-1">
+            athlete.recent.map((item, index) => (
+              <div
+                key={`${item.date}-${item.dayId}`}
+                className={cn("space-y-1", index === 0 && "rounded-xl bg-primary/8 p-2")}
+              >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium">
+                    {index === 0 ? "Newest · " : ""}
                     {item.date} · {item.title.split("·")[0]}
                   </span>
                   <span className="text-muted-foreground">
