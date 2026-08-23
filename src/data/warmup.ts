@@ -64,17 +64,6 @@ export const WARMUP_PRESETS: WarmupPreset[] = [
     detail: "Set how many minutes you walked, then save. Short before a lift, or 30 if that is the session.",
     steps: [{ minutes: 20, pace: "Easy" }],
   },
-  {
-    id: "arms-mobility",
-    kind: "mobility",
-    title: "Elbows and shoulders",
-    detail: "Band work, pain-free. Feeding the joints, not training them.",
-    steps: [
-      { minutes: 2, pace: "Band external rotations" },
-      { minutes: 2, pace: "Straight-arm band pushdowns" },
-      { minutes: 2, pace: "Easy biceps stretch" },
-    ],
-  },
 ];
 
 export function warmupById(id: string) {

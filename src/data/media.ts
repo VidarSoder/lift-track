@@ -44,7 +44,6 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "walk-easy-10": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
   "walk-easy-30": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
   "walk-easy": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  "arms-mobility": { slug: "External_Rotation", youtube: "JyDFNGQQdvw" },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {

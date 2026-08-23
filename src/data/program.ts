@@ -603,11 +603,11 @@ export const DAYS: ProgramDay[] = [
     weekday: "saturday",
     title: "Warm-up · walk, run, bike",
     source: "Easy start, any day",
-    focus: "Walk, treadmill, bike, or the elbow-and-shoulder circuit. Do one, or a few, then lift later if you want.",
+    focus: "Walk, treadmill, or bike. Do one, or a few, then lift later if you want.",
     durationMin: "8–40",
     warmup: [],
     coaching:
-      "This is its own session. The Saturday walk and arm-care live here now — pick a walk or the mobility circuit the same way you pick a bike. Finish it and you can still start Push, Arms, or whatever else the same day.",
+      "This is its own session. Pick a walk, a run, or a bike. Finish it and you can still start Push, Arms, or whatever else the same day.",
     exercises: WARMUP_PRESETS.map((preset) => ({
       id: preset.id,
       name:
@@ -623,21 +623,14 @@ export const DAYS: ProgramDay[] = [
           ? "Treadmill"
           : preset.kind === "bike"
             ? "Exercise bike"
-            : preset.kind === "walk"
-              ? "Outdoors or treadmill"
-              : "Light band",
+            : "Outdoors or treadmill",
       setup: preset.detail,
       how: preset.steps.map((step) => `${step.minutes} min at ${step.pace}`).join(". Then "),
-      mistakes:
-        preset.kind === "mobility"
-          ? "Forcing a stretch into a sharp elbow pinch."
-          : "Turning the warm-up into the workout.",
+      mistakes: "Turning the warm-up into the workout.",
       progress:
-        preset.kind === "mobility"
-          ? "Consistency beats intensity."
-          : preset.kind === "walk"
-            ? "Set the minutes you actually walked, then save."
-            : "Same pace is fine. Add a minute before you add speed.",
+        preset.kind === "walk"
+          ? "Set the minutes you actually walked, then save."
+          : "Same pace is fine. Add a minute before you add speed.",
     })),
   },
   {
