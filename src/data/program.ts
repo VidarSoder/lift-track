@@ -38,6 +38,21 @@ export const DAYS: ProgramDay[] = [
         progress: "When all 4 sets hit 8 clean reps, add 2.5 kg next Monday.",
       },
       {
+        id: "machine-bench",
+        name: "Machine chest press",
+        group: "Chest",
+        sets: 3,
+        reps: "8–12",
+        restSec: 90,
+        tempo: "2-0-1-0",
+        equipment: "Chest press machine",
+        setup:
+          "Seat so the handles sit at mid-chest. Shoulder blades packed against the pad. Feet flat.",
+        how: "Press until the elbows are almost straight, squeeze the chest, then let the handles come back to a stretch without the stack slamming.",
+        mistakes: "Locking out hard and losing the shoulders, or bouncing the plates at the bottom.",
+        progress: "Add a plate after 3×12 with a pause on the chest.",
+      },
+      {
         id: "incline-db-press",
         name: "Incline dumbbell press",
         group: "Chest",

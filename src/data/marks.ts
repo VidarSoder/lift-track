@@ -131,6 +131,7 @@ const TONES = {
 
 export const EXERCISE_MARKS: Record<string, Mark> = {
   "bench-press": { icon: RectangleHorizontal, tone: TONES.sand },
+  "machine-bench": { icon: Columns2, tone: TONES.rust },
   "incline-db-press": { icon: ArrowUpRight, tone: TONES.rust },
   "seated-db-press": { icon: Triangle, tone: TONES.copper },
   "weighted-dip": { icon: ArrowDownToLine, tone: TONES.clay },
