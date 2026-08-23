@@ -698,12 +698,18 @@ export function WorkoutSessionView() {
               </button>
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  const next = !open;
                   setExpanded((current) => ({
                     ...current,
-                    [exercise.id]: !open,
-                  }))
-                }
+                    [exercise.id]: next,
+                  }));
+                  if (!next) {
+                    setOpenHow((current) =>
+                      current === exercise.id ? null : current,
+                    );
+                  }
+                }}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
                 <div className="min-w-0 flex-1">
