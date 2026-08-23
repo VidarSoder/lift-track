@@ -67,9 +67,21 @@ export function displayMs(state: SessionTimerState, now = Date.now()) {
 
 export function formatTimer(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(total / 60);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function spanMs(startIso: string, endIso?: string, now = Date.now()) {
+  const start = new Date(startIso).getTime();
+  if (!Number.isFinite(start)) return 0;
+  const end = endIso ? new Date(endIso).getTime() : now;
+  if (!Number.isFinite(end)) return 0;
+  return Math.max(0, end - start);
 }
 
 export function isIdle(state: SessionTimerState) {

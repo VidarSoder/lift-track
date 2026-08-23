@@ -12,7 +12,7 @@ Every lift in a session has a **Warm-up set** button at the top of the set list.
 
 Warm-up has one **Bike**, one **Run**, and one **Walk**. After you start, pick a visible prefill or set minutes and pace yourself. Walk uses the same minutes + km/h controls as a run. Sets, reps, and kg keep +/−, and you can tap the number to type or drag the slider.
 
-While a session is open, a rest timer sits above the bottom bar. Start, end, or clear, or tap 1:00 / 1:30 / 2:00. Hide it to a small pill; tap the pill to open it again.
+While a session is open, a workout clock runs from Start until you finish or cancel. A rest timer sits next to it: start, end, or clear, or tap 1:00 / 1:30 / 2:00. Hide the rest controls to a small pill; the workout clock stays visible.
 
 Pull down from the top of any page to refresh. Cancel an open session if you want out — save the kg (default) or remove it. Finish always saves.
 

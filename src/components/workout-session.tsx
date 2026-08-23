@@ -36,6 +36,7 @@ import {
 import { AddExerciseButton } from "@/components/add-exercise";
 import { DangerConfirm } from "@/components/danger-confirm";
 import { CardioRide } from "@/components/cardio-ride";
+import { SessionClock } from "@/components/session-clock";
 import { Stepper } from "@/components/stepper";
 import { BikeStatsCard } from "@/components/bike-stats";
 import { WarmupCard } from "@/components/warmup-picker";
@@ -494,11 +495,19 @@ export function WorkoutSessionView() {
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
             {session.status === "completed" ? "Logged" : "In session"}
           </p>
-          {counts ? (
-            <Badge variant="secondary">
-              {counts.completedSets}/{counts.plannedSets} sets
-            </Badge>
-          ) : null}
+          <div className="flex items-center gap-2">
+            <SessionClock
+              startedAt={session.startedAt}
+              finishedAt={session.finishedAt}
+              running={session.status === "in_progress"}
+              className="text-sm font-semibold text-foreground"
+            />
+            {counts ? (
+              <Badge variant="secondary">
+                {counts.completedSets}/{counts.plannedSets} sets
+              </Badge>
+            ) : null}
+          </div>
         </div>
         <h1 className="font-heading text-3xl leading-none">{day.title}</h1>
         <div className="flex items-center justify-between gap-3">
@@ -1278,6 +1287,18 @@ export function WorkoutSessionView() {
         <div className="space-y-3">
           <p className="text-center text-sm text-muted-foreground">
             Saved. Those loads come back the next time you run this workout.
+            {session.startedAt ? (
+              <>
+                {" "}
+                You trained for{" "}
+                <SessionClock
+                  startedAt={session.startedAt}
+                  finishedAt={session.finishedAt}
+                  running={false}
+                />
+                .
+              </>
+            ) : null}
           </p>
           <Link
             href="/"
