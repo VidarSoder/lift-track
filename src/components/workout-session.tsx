@@ -14,6 +14,7 @@ import {
   createSession,
   emptyAfter,
   insertWarmupSet,
+  lastBikeLoad,
   lastLoad,
   liftIsDone,
   previousSets,
@@ -23,7 +24,7 @@ import {
   warmupSets,
   workingSets,
 } from "@/lib/session";
-import { cardioUnits, firstNumber, warmupById } from "@/data/warmup";
+import { cardioUnits, firstNumber, isBikeExercise, warmupById } from "@/data/warmup";
 import { rememberCustom, resolveExercise } from "@/lib/exercises";
 import type { LoggedSet, PinnedExercise, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
@@ -34,6 +35,7 @@ import {
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
 import { DangerConfirm } from "@/components/danger-confirm";
+import { BikeRide } from "@/components/bike-ride";
 import { BikeStatsCard } from "@/components/bike-stats";
 import { WarmupCard } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
@@ -328,13 +330,15 @@ export function WorkoutSessionView() {
     const next = createSession(nextDay, today, pendingExtras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
-      const fallback = lastLoad(athlete, exercise.exerciseId);
+      const fallback = isBikeExercise(exercise.exerciseId)
+        ? lastBikeLoad(athlete) ?? lastLoad(athlete, exercise.exerciseId)
+        : lastLoad(athlete, exercise.exerciseId);
       const preset = warmupById(exercise.exerciseId);
       if (preset) {
         exercise.sets = preset.steps.map((step, index) => ({
           weight:
             prev[index]?.weight ?? fallback?.weight ?? firstNumber(step.pace),
-          reps: prev[index]?.reps ?? step.minutes,
+          reps: prev[index]?.reps ?? fallback?.reps ?? step.minutes,
           done: false,
         }));
         continue;
@@ -673,7 +677,9 @@ export function WorkoutSessionView() {
         const warmLogged = warmupSets(logged.sets);
         const extraCount = Math.max(0, workLogged.length - exercise.sets);
         const units = cardioUnits(exercise.group);
-        const allowWarmup = units.only !== "work";
+        const bike = isBikeExercise(exercise.id, exercise.group);
+        const bikeLoad = bike ? lastBikeLoad(athlete) ?? load : load;
+        const allowWarmup = units.only !== "work" && !bike;
         const seedKg = load?.weight ?? prev[0]?.weight ?? exercise.defaultLoad ?? units.fallbackLoad;
         const warmupGuess = suggestedWarmup(
           seedKg,
@@ -717,13 +723,17 @@ export function WorkoutSessionView() {
                   </p>
                   <p className="truncate font-medium leading-tight">{exercise.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {workLogged.filter((set) => set.done).length}/{workLogged.length} sets
+                    {bike
+                      ? `${workLogged.length} ${workLogged.length === 1 ? "block" : "blocks"} · ${workLogged.reduce((sum, set) => sum + (set.reps ?? 0), 0) || "—"} min`
+                      : `${workLogged.filter((set) => set.done).length}/${workLogged.length} sets`}
                     {warmLogged.length > 0 ? ` · ${warmLogged.length} warm-up` : ""}
                     {extraCount > 0 ? ` · +${extraCount} extra` : ""}
-                    {load
-                      ? load.weight === 0
-                        ? ` · last BW${load.reps ? ` × ${load.reps}` : ""}`
-                        : ` · last ${load.weight} ${units.load}`
+                    {bike && bikeLoad
+                      ? ` · last lvl ${bikeLoad.weight}`
+                      : load
+                        ? load.weight === 0
+                          ? ` · last BW${load.reps ? ` × ${load.reps}` : ""}`
+                          : ` · last ${load.weight} ${units.load}`
                       : ""}
                   </p>
                 </div>
@@ -771,11 +781,13 @@ export function WorkoutSessionView() {
                         className="h-8 px-3"
                         onClick={() => {
                           const startWeight =
-                            load?.weight ??
+                            (bike ? bikeLoad?.weight : load?.weight) ??
                             prev[0]?.weight ??
                             exercise.defaultLoad ??
                             units.fallbackLoad;
-                          const startReps = prev[0]?.reps ?? 8;
+                          const startReps = bike
+                            ? prev[0]?.reps ?? bikeLoad?.reps ?? 10
+                            : prev[0]?.reps ?? 8;
                           const exercises = session.exercises.map((item) =>
                             item.exerciseId === exercise.id
                               ? {
@@ -808,6 +820,37 @@ export function WorkoutSessionView() {
                     )}
                   </div>
                 </div>
+                {bike ? (
+                  <BikeRide
+                    sets={logged.sets}
+                    lastLevel={bikeLoad?.weight}
+                    lastMinutes={bikeLoad?.reps}
+                    locked={session.status === "completed"}
+                    onChange={(sets) => {
+                      const exercises = session.exercises.map((item) =>
+                        item.exerciseId === exercise.id
+                          ? {
+                              ...item,
+                              sets,
+                              done: liftIsDone({ ...item, sets, done: false }),
+                            }
+                          : item,
+                      );
+                      const nowDone = Boolean(
+                        exercises.find((item) => item.exerciseId === exercise.id)
+                          ?.done,
+                      );
+                      patch({ ...session, exercises }, nowDone);
+                      if (nowDone && !done) {
+                        celebrateDone(exercise.name, exercise.id);
+                        setExpanded((current) => ({
+                          ...current,
+                          [exercise.id]: false,
+                        }));
+                      }
+                    }}
+                  />
+                ) : null}
                 {session.status !== "completed" && allowWarmup ? (
                   <Button
                     type="button"
@@ -860,7 +903,9 @@ export function WorkoutSessionView() {
                         : ""}
                   </Button>
                 ) : null}
-                {logged.sets.map((set, index) => {
+                {bike
+                  ? null
+                  : logged.sets.map((set, index) => {
                   const warmupIndex = set.warmup
                     ? logged.sets.slice(0, index).filter((entry) => entry.warmup).length
                     : -1;
@@ -940,7 +985,7 @@ export function WorkoutSessionView() {
                     />
                   );
                 })}
-                {session.status !== "completed" ? (
+                {session.status !== "completed" && !bike ? (
                   <Button
                     type="button"
                     variant="outline"

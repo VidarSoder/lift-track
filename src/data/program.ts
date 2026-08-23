@@ -611,8 +611,8 @@ export const DAYS: ProgramDay[] = [
     exercises: WARMUP_PRESETS.map((preset) => ({
       id: preset.id,
       name:
-        preset.kind === "walk"
-          ? "Walk"
+        preset.kind === "walk" || preset.kind === "bike"
+          ? warmupLabel(preset.kind)
           : `${warmupLabel(preset.kind)} · ${preset.title}`,
       group: warmupLabel(preset.kind),
       sets: preset.steps.length,
@@ -630,7 +630,9 @@ export const DAYS: ProgramDay[] = [
       progress:
         preset.kind === "walk"
           ? "Set the minutes you actually walked, then save."
-          : "Same pace is fine. Add a minute before you add speed.",
+          : preset.kind === "bike"
+            ? "Add a segment when you change level. Log km and kcal from the screen after."
+            : "Same pace is fine. Add a minute before you add speed.",
     })),
   },
   {

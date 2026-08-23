@@ -1,33 +1,19 @@
 import type { WarmupKind, WarmupPreset } from "@/lib/types";
 
+const LEGACY_BIKE_IDS = new Set([
+  "bike-easy-8",
+  "bike-ramp-10",
+  "bike-hard-then-easy",
+]);
+
 export const WARMUP_PRESETS: WarmupPreset[] = [
   {
-    id: "bike-easy-8",
+    id: "bike",
     kind: "bike",
-    title: "Easy spin",
-    detail: "8 minutes, just get warm",
-    steps: [{ minutes: 8, pace: "Easy · level 4–5" }],
-  },
-  {
-    id: "bike-ramp-10",
-    kind: "bike",
-    title: "Ramp then settle",
-    detail: "Build it, then sit back down",
-    steps: [
-      { minutes: 4, pace: "Easy · level 4" },
-      { minutes: 4, pace: "Moderate · level 6" },
-      { minutes: 2, pace: "Easy · level 4" },
-    ],
-  },
-  {
-    id: "bike-hard-then-easy",
-    kind: "bike",
-    title: "Push, then wind down",
-    detail: "6 minutes working, 3 minutes easy",
-    steps: [
-      { minutes: 6, pace: "Working · level 7" },
-      { minutes: 3, pace: "Easy · level 4" },
-    ],
+    title: "Bike",
+    detail:
+      "One ride. After you start, set minutes and level like the console. Add a segment when you change resistance.",
+    steps: [{ minutes: 10, pace: "Level 5" }],
   },
   {
     id: "run-7-then-4",
@@ -67,7 +53,19 @@ export const WARMUP_PRESETS: WarmupPreset[] = [
 ];
 
 export function warmupById(id: string) {
+  if (LEGACY_BIKE_IDS.has(id)) {
+    return WARMUP_PRESETS.find((preset) => preset.id === "bike");
+  }
   return WARMUP_PRESETS.find((preset) => preset.id === id);
+}
+
+export function isBikeExercise(id: string, group?: string) {
+  return (
+    group === "Bike" ||
+    id === "bike" ||
+    LEGACY_BIKE_IDS.has(id) ||
+    warmupById(id)?.kind === "bike"
+  );
 }
 
 export function warmupsByKind(kind: WarmupKind) {

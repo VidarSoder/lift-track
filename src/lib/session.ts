@@ -345,6 +345,21 @@ export function previousWarmupSets(
   return warmupSets(rawPreviousSets(athlete, dayId, exerciseId));
 }
 
+const BIKE_LOAD_IDS = [
+  "bike",
+  "bike-easy-8",
+  "bike-ramp-10",
+  "bike-hard-then-easy",
+];
+
+export function lastBikeLoad(athlete: AthleteDoc): LastLoad | null {
+  for (const id of BIKE_LOAD_IDS) {
+    const load = lastLoad(athlete, id);
+    if (load) return load;
+  }
+  return null;
+}
+
 export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | null {
   const stored = athlete.lastLoads?.[exerciseId];
   if (stored && stored.weight != null) return stored;

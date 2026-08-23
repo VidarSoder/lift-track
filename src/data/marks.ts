@@ -167,6 +167,7 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "walk-easy-10": { icon: Route, tone: TONES.sage },
   "walk-easy-30": { icon: Route, tone: TONES.moss },
   "walk-easy": { icon: Route, tone: TONES.moss },
+  bike: { icon: Bike, tone: TONES.sage },
   "bike-easy-8": { icon: Bike, tone: TONES.sage },
   "bike-ramp-10": { icon: Bike, tone: TONES.pine },
   "bike-hard-then-easy": { icon: Bike, tone: TONES.moss },
