@@ -47,8 +47,8 @@ export function LockGate({ children }: { children: React.ReactNode }) {
         {PROGRAM_NAME}
       </h1>
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        One passphrase, then bookmark the page on your phone. The word is
-        checked on the server. Firebase writes only go through that session.
+        One passphrase unlocks your log. Bookmark the app on your phone and you
+        can start training without typing it again.
       </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="space-y-2">
@@ -73,7 +73,7 @@ export function LockGate({ children }: { children: React.ReactNode }) {
           className="h-12 w-full text-base"
           disabled={pending}
         >
-          {pending ? "Checking…" : "Open training"}
+          {pending ? "Checking…" : "Start training"}
         </Button>
       </form>
       <p className="mt-6 text-xs leading-5 text-muted-foreground">

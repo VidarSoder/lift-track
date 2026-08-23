@@ -2,7 +2,7 @@ import { WARMUP_PRESETS, warmupLabel } from "@/data/warmup";
 import type { Exercise, ProgramDay, Weekday } from "@/lib/types";
 
 export const ATHLETE_NAME = "Vidar";
-export const PROGRAM_NAME = "Get Huge Arms";
+export const PROGRAM_NAME = "Start training";
 export const TIMEZONE = "Europe/Stockholm";
 
 export const DAYS: ProgramDay[] = [
@@ -10,7 +10,7 @@ export const DAYS: ProgramDay[] = [
     id: "push",
     weekday: "monday",
     title: "Push · chest, shoulders, triceps",
-    source: "Get Huge Arms + second workout",
+    source: "Weekly program",
     focus: "Press strength first, then overload the long and lateral heads of the triceps.",
     durationMin: "55–70",
     warmup: [
@@ -152,7 +152,7 @@ export const DAYS: ProgramDay[] = [
         tempo: "3-0-1-0",
         equipment: "Cable + rope",
         setup:
-          "Face away from the stack, hinge slightly, upper arms by the ears. This is the long-head stretch from the arms plan.",
+          "Face away from the stack, hinge slightly, upper arms by the ears. Classic long-head stretch for the triceps.",
         how: "Let the rope pull the hands behind the head, then extend until the elbows are straight. Keep the biceps next to the ears.",
         mistakes: "Flaring the elbows wide or cutting the stretch short.",
         progress: "Chase the stretch more than the load.",
@@ -163,7 +163,7 @@ export const DAYS: ProgramDay[] = [
     id: "pull",
     weekday: "tuesday",
     title: "Pull · back, biceps",
-    source: "Get Huge Arms + second workout",
+    source: "Weekly program",
     focus: "Build the back with pull-ups, pulldowns, and a row, then bury the biceps.",
     durationMin: "60–75",
     warmup: [
@@ -246,7 +246,7 @@ export const DAYS: ProgramDay[] = [
         tempo: "3-0-1-1",
         equipment: "Barbell or EZ-bar",
         setup:
-          "Elbows slightly in front of the torso, ribs down. This is the main biceps builder from the arms plan.",
+          "Elbows slightly in front of the torso, ribs down. Main biceps builder on arm day.",
         how: "Curl until the biceps are fully shortened, squeeze 1 second, lower for 3 seconds. No body swing on the first 3 sets; a tiny cheat is allowed on the last 2 reps of set 4.",
         mistakes: "Dumping the elbows back or bouncing out of the bottom.",
         progress: "Add 2.5 kg after 4×10 with a 3-second lower.",
@@ -407,9 +407,9 @@ export const DAYS: ProgramDay[] = [
   {
     id: "arms",
     weekday: "thursday",
-    title: "Arms · Get Huge Arms day",
-    source: "Get Huge Arms by Ryan Spiteri",
-    focus: "The specialization day. Alternate triceps and biceps so each muscle recovers while the other works.",
+    title: "Arms · biceps & triceps",
+    source: "Weekly program",
+    focus: "Arm pump day. Alternate triceps and biceps so each muscle recovers while the other works.",
     durationMin: "50–65",
     warmup: [
       "Arm circles and band dislocates 1 minute",
@@ -422,7 +422,7 @@ export const DAYS: ProgramDay[] = [
       "Get 40+ g protein in the meal after this session.",
     ],
     coaching:
-      "This is the day the PDF is built around. Pair a triceps move with a biceps move, rest 75–90 seconds, then go again. Full range, hard squeeze, no ego on the EZ-bar. If a joint niggles, drop 20% and keep the pump.",
+      "The main arm day. Pair a triceps move with a biceps move, rest 75–90 seconds, then go again. Full range, hard squeeze, no ego on the EZ-bar. If a joint niggles, drop 20% and keep the pump.",
     exercises: [
       {
         id: "cg-bench",
@@ -466,7 +466,7 @@ export const DAYS: ProgramDay[] = [
         tempo: "3-0-1-0",
         equipment: "One dumbbell, seated",
         setup:
-          "Two hands on one bell. Elbows stay high. This loads the long head in a stretch — the key Get Huge Arms pattern.",
+          "Two hands on one bell. Elbows stay high. This loads the long head in a stretch — the classic overhead extension pattern.",
         how: "Lower behind the head until you feel the triceps stretch, then extend without slapping the elbows forward.",
         mistakes: "Flaring the elbows out to the sides.",
         progress: "Add 2 kg after 3×12.",
@@ -526,7 +526,7 @@ export const DAYS: ProgramDay[] = [
     id: "shoulders",
     weekday: "friday",
     title: "Shoulders + arm pump",
-    source: "Get Huge Arms",
+    source: "Weekly program",
     focus: "Cap the delts, then a shorter pump so Saturday is actually a rest day.",
     durationMin: "45–60",
     warmup: [
@@ -738,4 +738,4 @@ export const FEEL_GUIDE = {
 };
 
 export const BOOKMARK_HINT =
-  "Open the unlock link once, then add this site to your iPhone Home Screen (Share → Add to Home Screen). You will not need to type the passphrase again.";
+  "Open your unlock link once, then add Training to your iPhone Home Screen (Share → Add to Home Screen). Next time, tap the icon and start training — no passphrase needed.";

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Training · Vidar",
   description:
-    "Phone-first training log for Get Huge Arms and the second weekly workout.",
+    "Phone-first training log. Log sets, track progress, and start training from your phone.",
   applicationName: "Training",
   appleWebApp: {
     capable: true,

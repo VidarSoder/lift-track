@@ -68,7 +68,7 @@ export function TodayView() {
                 className: "h-12 w-full text-base",
               })}
             >
-              Start this
+              Start training
             </Link>
           </CardContent>
         </Card>

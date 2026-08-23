@@ -460,7 +460,7 @@ export function WorkoutSessionView() {
               </p>
             ) : (
               <Button size="lg" className="h-12 w-full text-base shadow-lg" onClick={() => startWorkout(day.id)}>
-                Start this workout
+                Start training
               </Button>
             )}
           </div>
