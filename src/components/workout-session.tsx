@@ -268,7 +268,6 @@ export function WorkoutSessionView() {
   const today = formatDateISO();
   const searchParams = useSearchParams();
   const pick = searchParams.get("pick");
-  const wantEnd = searchParams.get("end") === "1";
   const [openHow, setOpenHow] = useState<string | null>(null);
   const [beforeOpen, setBeforeOpen] = useState<boolean | undefined>(undefined);
   const [afterOpen, setAfterOpen] = useState<boolean | undefined>(undefined);
@@ -373,15 +372,6 @@ export function WorkoutSessionView() {
     }
     finishSession(current);
   }
-
-  useEffect(() => {
-    if (!wantEnd || !session || session.status !== "in_progress") return;
-    if (!viewingSession) return;
-    router.replace("/workout");
-    requestFinish(session);
-    // Only when arriving with ?end=1
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantEnd]);
 
   if (!viewingSession) {
     if (day) {

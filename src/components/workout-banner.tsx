@@ -1,19 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { formatDateISO } from "@/lib/dates";
 import { isOpenSession } from "@/lib/active-session";
-import { startWorkoutClock, stopWorkoutClock } from "@/lib/session";
+import {
+  resetWorkoutClock,
+  startWorkoutClock,
+  stopWorkoutClock,
+} from "@/lib/session";
 import type { WorkoutSession } from "@/lib/types";
 import { SessionClock } from "@/components/session-clock";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 
 export function WorkoutBanner() {
-  const router = useRouter();
   const { todaySession, persistSession } = useTraining();
   const open = isOpenSession(todaySession, formatDateISO());
+  const [clearArmed, setClearArmed] = useState(false);
+  const clearTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !todaySession?.startedAt) return;
@@ -21,13 +25,46 @@ export function WorkoutBanner() {
     persistSession(startWorkoutClock(todaySession), { immediate: true });
   }, [open, persistSession, todaySession]);
 
+  useEffect(() => {
+    return () => {
+      if (clearTimer.current != null) {
+        window.clearTimeout(clearTimer.current);
+      }
+    };
+  }, []);
+
   if (!open || !todaySession) return null;
 
-  const startedAt = todaySession.clockStartedAt ?? todaySession.startedAt;
-  const running = !todaySession.clockEndedAt;
+  const session = todaySession;
+  const startedAt = session.clockStartedAt ?? session.startedAt;
+  const running = !session.clockEndedAt;
 
   function save(next: WorkoutSession) {
     persistSession(next, { immediate: true });
+  }
+
+  function armClear() {
+    setClearArmed(true);
+    if (clearTimer.current != null) {
+      window.clearTimeout(clearTimer.current);
+    }
+    clearTimer.current = window.setTimeout(() => {
+      setClearArmed(false);
+      clearTimer.current = null;
+    }, 4000);
+  }
+
+  function onClear() {
+    if (!clearArmed) {
+      armClear();
+      return;
+    }
+    if (clearTimer.current != null) {
+      window.clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+    setClearArmed(false);
+    save(resetWorkoutClock(session));
   }
 
   return (
@@ -39,7 +76,7 @@ export function WorkoutBanner() {
           </p>
           <SessionClock
             startedAt={startedAt}
-            finishedAt={todaySession.clockEndedAt}
+            finishedAt={session.clockEndedAt}
             running={running}
             className="text-sm font-semibold leading-tight"
           />
@@ -50,32 +87,31 @@ export function WorkoutBanner() {
             size="sm"
             variant="secondary"
             className="h-8 px-3"
-            onClick={() => save(stopWorkoutClock(todaySession))}
+            onClick={() => save(stopWorkoutClock(session))}
           >
             Pause
           </Button>
         ) : (
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 px-3"
-            onClick={() => save(startWorkoutClock(todaySession))}
-          >
-            Resume
-          </Button>
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 px-3"
+              onClick={onClear}
+            >
+              {clearArmed ? "Clear?" : "Clear"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => save(startWorkoutClock(session))}
+            >
+              Resume
+            </Button>
+          </>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 px-3"
-          onClick={() => {
-            save(stopWorkoutClock(todaySession));
-            router.push("/workout?end=1");
-          }}
-        >
-          End
-        </Button>
       </div>
     </div>
   );

@@ -542,11 +542,12 @@ export function stopWorkoutClock(session: WorkoutSession): WorkoutSession {
   };
 }
 
-export function clearWorkoutClock(session: WorkoutSession): WorkoutSession {
+export function resetWorkoutClock(session: WorkoutSession): WorkoutSession {
+  const now = new Date().toISOString();
   return {
     ...session,
-    clockStartedAt: undefined,
-    clockEndedAt: undefined,
-    updatedAt: new Date().toISOString(),
+    clockStartedAt: now,
+    clockEndedAt: now,
+    updatedAt: now,
   };
 }
