@@ -140,6 +140,17 @@ export function sessionVolume(session: WorkoutSession) {
   }, 0);
 }
 
+export function sessionHasProgress(session: WorkoutSession) {
+  if (session.feelingBeforeSaved || session.feelingAfterSaved) return true;
+  if (session.bikeStats) return true;
+  if (session.warmup?.done) return true;
+  return session.exercises.some(
+    (exercise) =>
+      Boolean(exercise.done) ||
+      exercise.sets.some((set) => set.done || set.warmup),
+  );
+}
+
 export function sessionSetCounts(session: WorkoutSession) {
   const plannedSets = session.exercises.reduce(
     (sum, exercise) => sum + exercise.sets.length,
@@ -219,8 +230,18 @@ export function cancelWorkout(
     status: "skipped",
     finishedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    exercises: keepProgress ? session.exercises : [],
+    exercises: keepProgress && sessionHasProgress(session) ? session.exercises : [],
   };
+  if (!sessionHasProgress(session)) {
+    return {
+      athlete: {
+        ...athlete,
+        lastSessionStatus: "skipped" as const,
+        updatedAt: closed.updatedAt,
+      },
+      today: closed,
+    };
+  }
   const nextAthlete = keepProgress
     ? rememberProgress(athlete, closed)
     : stripTodaysProgress(athlete, session.date);

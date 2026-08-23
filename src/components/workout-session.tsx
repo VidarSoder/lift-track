@@ -17,6 +17,7 @@ import {
   forgetTodaysLift,
   lastCardioLoad,
   lastLoad,
+  sessionHasProgress,
   liftIsDone,
   previousSets,
   previousWarmupSets,
@@ -1395,41 +1396,65 @@ export function WorkoutSessionView() {
           <DialogHeader>
             <DialogTitle>Cancel this session?</DialogTitle>
             <DialogDescription>
-              Finish always saves. This is only if you want to drop the session.
-              Default is keep the kg you already logged. Removing progress asks
-              twice — that can wipe today’s last loads.
+              {sessionHasProgress(session)
+                ? "Finish always saves. This is only if you want to drop the session. Default is keep the kg you already logged. Removing progress asks twice — that can wipe today’s last loads."
+                : "Nothing is saved yet. This just closes the session."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Button
-              className="h-11 w-full"
-              onClick={() => {
-                cancelSession(session, true);
-                setCancelOpen(false);
-                toast.success("Session closed. Progress kept.");
-                router.replace("/");
-              }}
-            >
-              Save progress and close
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 w-full"
-              onClick={() => {
-                setCancelOpen(false);
-                setCancelWipeOpen(true);
-              }}
-            >
-              Remove progress
-            </Button>
-            <Button
-              variant="ghost"
-              className="h-11 w-full"
-              onClick={() => setCancelOpen(false)}
-            >
-              Keep training
-            </Button>
-          </div>
+          {sessionHasProgress(session) ? (
+            <div className="space-y-2">
+              <Button
+                className="h-11 w-full"
+                onClick={() => {
+                  cancelSession(session, true);
+                  setCancelOpen(false);
+                  toast.success("Session closed. Progress kept.");
+                  router.replace("/");
+                }}
+              >
+                Save progress and close
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 w-full"
+                onClick={() => {
+                  setCancelOpen(false);
+                  setCancelWipeOpen(true);
+                }}
+              >
+                Remove progress
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-11 w-full"
+                onClick={() => setCancelOpen(false)}
+              >
+                Keep training
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Button
+                variant="destructive"
+                className="h-11 w-full"
+                onClick={() => {
+                  cancelSession(session, false);
+                  setCancelOpen(false);
+                  toast.success("Session cancelled.");
+                  router.replace("/");
+                }}
+              >
+                Yes, cancel
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-11 w-full"
+                onClick={() => setCancelOpen(false)}
+              >
+                Keep training
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
