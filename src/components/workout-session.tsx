@@ -388,7 +388,7 @@ export function WorkoutSessionView() {
               />
             )}
           </div>
-          <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-border/70 bg-background px-4 pt-3 pb-2">
+          <div className="sticky bottom-0 z-10 -mx-4 mt-auto bg-transparent px-4 pt-3 pb-2">
             {locked ? (
               <p className="rounded-xl bg-secondary/80 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                 Preview only. Your current session stays open — use the floating
