@@ -350,7 +350,7 @@ export function ExerciseHowPanel({
           How it moves
         </p>
         <button type="button" onClick={onClose} className="text-xs font-medium text-primary">
-          Back
+          Close
         </button>
       </div>
       {media ? (
