@@ -20,6 +20,7 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "lat-pulldown": { slug: "Wide-Grip_Lat_Pulldown", youtube: "CAwf7n6Luuc" },
   "cable-row": { slug: "Seated_Cable_Rows", youtube: "G8l_8chR5TU" },
   "barbell-curl": { slug: "Barbell_Curl", youtube: "kwG2ipFRgfo" },
+  "db-curl": { slug: "Dumbbell_Bicep_Curl", youtube: "ykJmrZ5v0Oo" },
   "incline-curl": { slug: "Incline_Dumbbell_Curl", youtube: "soxrZl3sPVY" },
   "hammer-curl": { slug: "Alternate_Hammer_Curl", youtube: "TwD-YGVP4Bk" },
   "goblet-squat": { slug: "Goblet_Squat", youtube: "MeWKdoCcXg0" },

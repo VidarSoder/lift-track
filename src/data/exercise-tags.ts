@@ -211,6 +211,17 @@ export const EXERCISE_TAGS: Record<string, string[]> = {
     "skivstangscurl",
     "stående curl",
   ],
+  "db-curl": [
+    "stående hantelcurl",
+    "hantelcurl",
+    "dumbbell curl",
+    "stående curl",
+    "vanliga curl",
+    "bicepscurl",
+    "palms up",
+    "supinerad",
+    "normal curl",
+  ],
   "incline-curl": [
     "lutande curl",
     "incline curl",

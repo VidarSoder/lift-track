@@ -237,6 +237,21 @@ export const DAYS: ProgramDay[] = [
         progress: "Add 2.5 kg after 4×10 with a 3-second lower.",
       },
       {
+        id: "db-curl",
+        name: "Standing dumbbell curl",
+        group: "Biceps",
+        sets: 3,
+        reps: "8–10",
+        restSec: 75,
+        tempo: "3-0-1-0",
+        equipment: "Dumbbells",
+        setup:
+          "Stand tall, palms facing forward. This is the normal curl — not hammers. Hammers are thumbs-up and hit the brachialis; these are palms-up and hit the biceps peak.",
+        how: "Curl both bells, or alternate. Elbows pinned at the ribs, squeeze at the top, lower for 3 seconds. No swing.",
+        mistakes: "Turning the wrists into a hammer halfway up, or leaning back to cheat.",
+        progress: "Add 2 kg per hand after 3×10 strict.",
+      },
+      {
         id: "incline-curl",
         name: "Incline dumbbell curl",
         group: "Biceps",
