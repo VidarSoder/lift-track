@@ -10,6 +10,7 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "bench-press": { slug: "Barbell_Bench_Press_-_Medium_Grip", youtube: "es2HcgKWMvs" },
   "machine-bench": { slug: "Machine_Bench_Press", youtube: "xumixjXtPFk" },
   "incline-db-press": { slug: "Incline_Dumbbell_Press", youtube: "8iPEnn-ltWE" },
+  "pec-deck": { slug: "Butterfly", youtube: "eGjt4lk6g88" },
   "seated-db-press": { slug: "Seated_Dumbbell_Press", youtube: "qEwKCR5JCog" },
   "weighted-dip": { slug: "Dips_-_Triceps_Version", youtube: "2z8JmcrW-As" },
   "skull-crusher": { slug: "Decline_EZ_Bar_Triceps_Extension", youtube: "d_KZxkY_0cM" },

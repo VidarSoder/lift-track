@@ -68,6 +68,21 @@ export const DAYS: ProgramDay[] = [
         progress: "Add 2 kg per hand after 3×10 with the same load.",
       },
       {
+        id: "pec-deck",
+        name: "Chest fly machine",
+        group: "Chest",
+        sets: 3,
+        reps: "10–15",
+        restSec: 75,
+        tempo: "2-1-1-1",
+        equipment: "Pec deck / fly machine",
+        setup:
+          "Seat so the handles are at mid-chest and the elbows stay slightly below the shoulders. Back flat on the pad. This is the isolation after the presses.",
+        how: "Bring the handles together, squeeze the chest for a second, then let them open until you feel a stretch. Soft elbows the whole way — do not lock out.",
+        mistakes: "Turning it into a press, or slamming the stack at the stretch.",
+        progress: "Add a plate after 3×15 with a pause in the middle.",
+      },
+      {
         id: "seated-db-press",
         name: "Seated dumbbell press",
         group: "Shoulders",
