@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, Images, Settings, TrendingUp } from "lucide-react";
 import { ActiveSessionFab } from "@/components/active-session-fab";
+import { SessionTimer } from "@/components/session-timer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { useTraining } from "@/components/training-provider";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <ActiveSessionFab />
       </Suspense>
+      <SessionTimer />
       <nav className="app-nav mt-auto shrink-0 border-t border-border/80 bg-background px-2 pt-1.5">
         <ul className="grid grid-cols-5 gap-1">
           {LINKS.map((link) => {
