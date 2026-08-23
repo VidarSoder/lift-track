@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <PullToRefresh
         onRefresh={reload}
         resetKey={pathname}
-        className="px-4 pt-[max(1.25rem,env(safe-area-inset-top))]"
+        className="px-4 pt-[max(1.5rem,calc(env(safe-area-inset-top,0px)+var(--app-top-gap)))]"
       >
         {children}
       </PullToRefresh>

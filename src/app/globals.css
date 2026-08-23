@@ -124,6 +124,7 @@
   html {
     @apply font-sans overflow-hidden overscroll-none;
     --app-height: 100dvh;
+    --app-top-gap: 0.5rem;
     height: var(--app-height, 100dvh);
     background: var(--background);
     -webkit-text-size-adjust: 100%;
