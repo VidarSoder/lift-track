@@ -11,9 +11,8 @@ export type SessionTimerState = {
 };
 
 export const REST_PRESETS = [
+  { label: "0:30", ms: 30_000 },
   { label: "1:00", ms: 60_000 },
-  { label: "1:30", ms: 90_000 },
-  { label: "2:00", ms: 120_000 },
 ] as const;
 
 export function emptyTimer(sessionDate: string): SessionTimerState {

@@ -79,6 +79,10 @@ export function SessionTimer() {
 
   if (!open) return null;
 
+  const countingUp = state.mode === "up" && (state.running || state.elapsedMs > 0);
+  const countingDown = state.mode === "down" && state.durationMs != null;
+  const idle = isIdle(state);
+
   function patch(next: SessionTimerState) {
     setState(next);
     setNow(Date.now());
@@ -86,6 +90,7 @@ export function SessionTimer() {
   }
 
   function start() {
+    if (countingDown && state.durationMs == null) return;
     buzzed.current = false;
     const finished =
       state.mode === "down" &&
@@ -96,11 +101,11 @@ export function SessionTimer() {
       running: true,
       startedAt: Date.now(),
       elapsedMs: finished ? 0 : elapsedMs(state),
-      mode: state.durationMs != null ? "down" : "up",
+      mode: countingDown ? "down" : "up",
     });
   }
 
-  function end() {
+  function stop() {
     if (!state.running) return;
     patch({
       ...state,
@@ -118,21 +123,25 @@ export function SessionTimer() {
     });
   }
 
-  function startRest(ms: number) {
+  function addCountdown(ms: number) {
+    if (state.running || countingUp) return;
     buzzed.current = false;
+    const current =
+      state.mode === "down" && state.durationMs != null && !done
+        ? Math.max(0, state.durationMs - elapsedMs(state))
+        : 0;
     patch({
       ...state,
       hidden: false,
-      running: true,
+      running: false,
       mode: "down",
-      durationMs: ms,
+      durationMs: current + ms,
       elapsedMs: 0,
-      startedAt: Date.now(),
+      startedAt: null,
     });
   }
 
   const label = formatTimer(remaining);
-  const idle = isIdle(state);
 
   if (state.hidden) {
     return (
@@ -160,14 +169,19 @@ export function SessionTimer() {
   return (
     <div className="shrink-0 border-t border-border/60 bg-background px-3 py-2.5">
       <div className="flex items-center justify-between gap-3">
-        <p
-          className={cn(
-            "font-heading text-3xl font-semibold tabular-nums tracking-tight",
-            (state.running || done) && "text-primary",
-          )}
-        >
-          {label}
-        </p>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            {countingDown ? "Countdown" : countingUp ? "Count up" : "Timer"}
+          </p>
+          <p
+            className={cn(
+              "font-heading text-3xl font-semibold tabular-nums tracking-tight",
+              (state.running || done) && "text-primary",
+            )}
+          >
+            {label}
+          </p>
+        </div>
         <button
           type="button"
           className="h-9 rounded-full px-3 text-sm text-muted-foreground"
@@ -176,11 +190,38 @@ export function SessionTimer() {
           Hide
         </button>
       </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {REST_PRESETS.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            disabled={state.running || countingUp}
+            onClick={() => addCountdown(preset.ms)}
+            className={cn(
+              "h-10 rounded-xl text-sm font-medium disabled:opacity-40",
+              countingDown && !countingUp
+                ? "bg-primary/20 text-primary"
+                : "bg-secondary text-secondary-foreground",
+            )}
+          >
+            + {preset.label}
+          </button>
+        ))}
+      </div>
+      <p className="mt-1.5 text-[11px] leading-4 text-muted-foreground">
+        {countingUp
+          ? "Counting up. Clear to use a countdown."
+          : countingDown
+            ? "Add time, then Start. Clear to count up instead."
+            : "Start to count up, or add 0:30 / 1:00, then Start."}
+      </p>
+
       <div className="mt-2 grid grid-cols-3 gap-2">
         <Button
           type="button"
           className="h-11"
-          disabled={state.running}
+          disabled={state.running || (countingDown && state.durationMs == null)}
           onClick={start}
         >
           Start
@@ -190,7 +231,7 @@ export function SessionTimer() {
           variant="secondary"
           className="h-11"
           disabled={!state.running}
-          onClick={end}
+          onClick={stop}
         >
           Stop
         </Button>
@@ -203,25 +244,6 @@ export function SessionTimer() {
         >
           Clear
         </Button>
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {REST_PRESETS.map((preset) => (
-          <button
-            key={preset.label}
-            type="button"
-            onClick={() => startRest(preset.ms)}
-            className={cn(
-              "h-10 rounded-xl text-sm font-medium",
-              state.mode === "down" &&
-                state.durationMs === preset.ms &&
-                (state.running || done)
-                ? "bg-primary/20 text-primary"
-                : "bg-secondary text-secondary-foreground",
-            )}
-          >
-            {preset.label}
-          </button>
-        ))}
       </div>
     </div>
   );
