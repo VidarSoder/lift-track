@@ -1,23 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import { useTraining } from "@/components/training-provider";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatNiceDate } from "@/lib/dates";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 
 export function SettingsView() {
-  const { athlete, setAthlete } = useTraining();
+  const { athlete } = useTraining();
   const log = weightLog(athlete);
   const current = latestWeight(athlete);
   const delta = weightDelta(athlete);
-  const [start, setStart] = useState(athlete.programStartDate);
 
   return (
     <div className="space-y-5 pb-4">
@@ -27,7 +21,7 @@ export function SettingsView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">You</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Body weight, program start, and the few things the log needs.
+          Body weight and the few things the log needs.
         </p>
       </header>
 
@@ -48,55 +42,13 @@ export function SettingsView() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {log.length > 0
                     ? `${log.length} weigh-in${log.length === 1 ? "" : "s"} logged`
-                    : "Add a weigh-in to start the history."}
+                    : "Tap to add a weigh-in and start the history."}
                 </p>
               )}
             </div>
             <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
           </CardContent>
         </Card>
-      </Link>
-
-      <Card>
-        <CardContent className="space-y-3 pt-5">
-          <p className="text-base font-medium">Program start</p>
-          <Label htmlFor="start">Week 1, day 1</Label>
-          <Input
-            id="start"
-            type="date"
-            value={start}
-            onChange={(event) => setStart(event.target.value)}
-            className="h-11"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              setAthlete(
-                {
-                  ...athlete,
-                  programStartDate: start,
-                  updatedAt: new Date().toISOString(),
-                },
-                { immediate: true },
-              );
-              toast.success("Start date saved");
-            }}
-          >
-            Save start date
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Link
-        href="/settings/weight"
-        className={buttonVariants({
-          variant: "outline",
-          className: "w-full",
-        })}
-      >
-        Open weigh-ins
       </Link>
     </div>
   );
