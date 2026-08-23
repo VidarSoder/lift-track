@@ -437,28 +437,35 @@ export function WorkoutSessionView() {
       );
     }
     return (
-      <div className="space-y-4 pb-4">
-        <header>
-          <h1 className="font-heading text-3xl leading-none">Pick a workout</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+      <div className="flex min-h-full flex-1 flex-col justify-center py-4">
+        <header className="text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+            Lift
+          </p>
+          <h1 className="mt-3 font-heading text-4xl leading-none tracking-tight">
+            Pick a workout
+          </h1>
+          <p className="mx-auto mt-3 max-w-[17rem] text-sm leading-6 text-muted-foreground">
             Preview first. You can leave and come back after you start.
           </p>
         </header>
-        {workoutCatalog().map((workout) => (
-          <Link
-            key={workout.id}
-            href={`/workout?pick=${workout.id}`}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left"
-          >
-            <ExerciseMark id={workout.id} />
-            <div>
-              <p className="font-medium">{workout.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {workout.exercises.length} lifts · {workout.durationMin} min
-              </p>
-            </div>
-          </Link>
-        ))}
+        <div className="mt-8 space-y-2">
+          {workoutCatalog().map((workout) => (
+            <Link
+              key={workout.id}
+              href={`/workout?pick=${workout.id}`}
+              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left"
+            >
+              <ExerciseMark id={workout.id} />
+              <div>
+                <p className="font-medium">{workout.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {workout.exercises.length} lifts · {workout.durationMin} min
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     );
   }

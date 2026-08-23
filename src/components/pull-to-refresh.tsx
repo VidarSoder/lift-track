@@ -154,7 +154,7 @@ export function PullToRefresh({
           )}
         </div>
       </div>
-      <div className="flex min-h-full flex-col">{children}</div>
+      <div className="flex min-h-full flex-1 flex-col">{children}</div>
     </div>
   );
 }
