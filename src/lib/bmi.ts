@@ -66,3 +66,17 @@ export function bmiMetricsForKg(
     kgToNormalMax: kg > maxKg ? Number((kg - maxKg).toFixed(1)) : null,
   };
 }
+
+export type BmiLogEntry = { date: string; kg: number; bmi: number };
+
+/** BMI points aligned to weigh-in dates — grows with each new weigh-in. */
+export function bmiLogFromWeights(
+  entries: { date: string; kg: number }[],
+  heightCm = ATHLETE_HEIGHT_CM,
+): BmiLogEntry[] {
+  return entries.map((entry) => ({
+    date: entry.date,
+    kg: entry.kg,
+    bmi: bmiForKg(entry.kg, heightCm),
+  }));
+}

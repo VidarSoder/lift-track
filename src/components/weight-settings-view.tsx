@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BackLink } from "@/components/back-link";
 import { DangerConfirm } from "@/components/danger-confirm";
-import { WeightChart } from "@/components/weight-chart";
+import { WeightChart, BmiChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   ATHLETE_HEIGHT_CM,
   bmiForKg,
+  bmiLogFromWeights,
   bmiMetricsForKg,
   type BmiMetrics,
 } from "@/lib/bmi";
@@ -84,6 +85,7 @@ function BmiHistoryRow({ date, kg }: { date: string; kg: number }) {
 export function WeightSettingsView() {
   const { athlete, setAthlete } = useTraining();
   const log = weightLog(athlete);
+  const bmiLog = bmiLogFromWeights(log);
   const current = latestWeight(athlete);
   const delta = weightDelta(athlete);
   const metrics = current ? bmiMetricsForKg(current.kg) : null;
@@ -244,6 +246,7 @@ export function WeightSettingsView() {
           ) : (
             <>
               <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Weight (kg)</p>
                 <WeightChart entries={log} />
                 {current && metrics ? (
                   <div className="flex justify-end">
@@ -259,6 +262,14 @@ export function WeightSettingsView() {
                     </Button>
                   </div>
                 ) : null}
+                {showBmi && bmiLog.length > 0 ? (
+                  <div className="space-y-2 border-t border-border/60 pt-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      BMI trend · {ATHLETE_HEIGHT_CM} cm
+                    </p>
+                    <BmiChart entries={bmiLog} />
+                  </div>
+                ) : null}
                 {showBmi && current && metrics ? (
                   <div className="space-y-3">
                     <BmiDetails metrics={metrics} />
@@ -266,7 +277,7 @@ export function WeightSettingsView() {
                       <p className="text-xs font-medium text-muted-foreground">
                         BMI per weigh-in
                       </p>
-                      {[...log]
+                      {bmiLog
                         .sort((a, b) => b.date.localeCompare(a.date))
                         .map((item) => (
                           <BmiHistoryRow
