@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BOOKMARK_HINT, PROGRAM_NAME } from "@/data/program";
-import { PullToRefresh } from "@/components/pull-to-refresh";
+import { AppLoader } from "@/components/app-loader";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,19 +15,6 @@ export function LockGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const router = useRouter();
-
-  if (!ready) {
-    return (
-      <PullToRefresh
-        onRefresh={async () => window.location.reload()}
-        className="flex min-h-dvh items-center justify-center bg-background px-5 text-sm text-muted-foreground"
-      >
-        Loading the week…
-      </PullToRefresh>
-    );
-  }
-
-  if (unlocked) return <>{children}</>;
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -41,11 +28,18 @@ export function LockGate({ children }: { children: React.ReactNode }) {
     router.replace("/");
   }
 
+  if (!ready) {
+    return <AppLoader title="Training" detail="Getting your log…" />;
+  }
+
+  if (unlocked) return <>{children}</>;
+
+  if (pending) {
+    return <AppLoader title="Training" detail="Opening your log…" />;
+  }
+
   return (
-    <PullToRefresh
-      onRefresh={async () => window.location.reload()}
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5"
-    >
+    <div className="flex min-h-full flex-1 flex-col justify-center py-6">
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary">
         Vidar · training
       </p>
@@ -85,6 +79,6 @@ export function LockGate({ children }: { children: React.ReactNode }) {
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         {BOOKMARK_HINT}
       </p>
-    </PullToRefresh>
+    </div>
   );
 }

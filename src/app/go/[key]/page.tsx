@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AppLoader } from "@/components/app-loader";
 import { useTraining } from "@/components/training-provider";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -46,8 +47,8 @@ export default function UnlockPage({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-      <p className="text-sm text-muted-foreground">Unlocking…</p>
+    <div className="flex min-h-dvh flex-col bg-background">
+      <AppLoader title="Training" detail="Opening your log…" />
     </div>
   );
 }

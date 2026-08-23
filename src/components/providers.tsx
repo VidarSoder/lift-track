@@ -17,9 +17,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       {isUnlock ? (
         children
       ) : (
-        <LockGate>
-          <AppShell>{children}</AppShell>
-        </LockGate>
+        <AppShell>
+          <LockGate>{children}</LockGate>
+        </AppShell>
       )}
       <Toaster />
     </TrainingProvider>
