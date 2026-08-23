@@ -1,57 +1,51 @@
-# Training
+# Lift Track
 
-Phone-first training log for Vidar. Today’s session, set-by-set weights, previous loads, how you felt, and progress.
+A phone-first workout log built with Next.js. Log sets, track body weight, preview exercise form, and review progress — optimized for one-handed use on a phone.
 
-**Form** is the preview book: still photos and last-used kg on the list. Search at the top works in Swedish and English (`bänkpress`, `latsdrag`, `knäböj`, `sidolyft`). Each row shows Swedish tags so those names stay visible. Tap a row for the GIF on that page, then Back. A short YouTube link is there if you want it. After you log a lift once, that weight comes back the next time. The bottom bar sits in the page chrome so Chrome on a phone cannot leave it floating. An in-progress session has a Back to session strip above the nav.
+**Live:** https://training-eight-fawn.vercel.app
 
-Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
+## What it does
 
-**Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document. History has a chart. Removing a weigh-in is behind Edit, then two confirms.
+- **Today** — see the planned session and jump into a workout
+- **Form** — searchable exercise library with photos and last-used weights (Swedish + English search)
+- **Lift** — set-by-set logging with warm-ups, timers, and cardio warm-up options
+- **Progress** — session history, lift trends, body weight chart, PRs
+- **Settings** — body-weight weigh-ins (with optional BMI details) and program start date
 
-Every lift in a session has a **Warm-up set** button at the top of the set list. Tap it to add a lighter set (about half of last working kg, then it climbs). Warm-ups sit above the working sets, do not count as PRs or last load, and you can add more than one. Extra working sets stay on **Add a set**.
+## Tech stack
 
-Warm-up has one **Bike**, one **Run**, and one **Walk**. After you start, pick a visible prefill or set minutes and pace yourself. Walk uses the same minutes + km/h controls as a run. Sets, reps, and kg keep +/−, and you can tap the number to type or drag the slider.
-
-While a session is open, a thin **Workout** banner sits at the top. The clock starts when you open the session. Pause, resume, or End from there. A transparent timer button stays bottom-right: tap it to open the quick timer above, tap again to hide. Start with no time to count up, or add 0:30 / 1:00 and then Start to count down.
-
-Pull down from the top of any page to refresh. Sets save as you log them. Finish sends the session to Progress, even if it was short. Dismiss closes it without counting as a finished session; the kg still come back next time. If you End or Finish too early, Progress has Reopen for 24 hours.
-
-## Weekly plan
-
-| Day | Session |
-| --- | --- |
-| Mon | Push · chest, shoulders, triceps |
-| Tue | Pull · weighted pull-ups, then normal pull-ups, row, curls |
-| Wed | Legs · second workout |
-| Thu | Arms · Get Huge Arms day |
-| Fri | Shoulders + arm pump |
-| Sat | Warm-up · walk, run, or bike |
-| Sun | Rest |
-
-The schedule lives in `src/data/program.ts`.
+- Next.js (App Router) · TypeScript · Tailwind
+- Firebase Firestore (Admin SDK on the server only)
+- Deployed on Vercel
 
 ## Security
 
-- `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` are server-only.
-- Firestore rules deny every client read and write.
-- The Admin SDK writes only the single athlete document and the current session (today, or a session still open / reopenable within 24 hours).
-- Unlock attempts are rate-limited. Deletes are not exposed.
+This repo is public. **No secrets are committed.**
 
-I've set up prototype Security Rules to keep the data in Firestore safe. They are designed to be secure because the client SDK is locked out entirely and the server accepts writes only after a signed session cookie. However, you should review and verify them before broadly sharing your app. If you'd like, I can help you harden these rules.
+| Layer | How it works |
+| --- | --- |
+| **Firestore** | Rules deny all client reads and writes. Data is only accessed through the server Admin SDK. |
+| **API** | Origin-locked; requires an httpOnly session cookie after passphrase unlock. |
+| **Secrets** | `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` live in Vercel environment variables only — never in the browser or this repo. |
+| **Writes** | Server validates every payload (typed checks, size limits, date formats) before writing to Firestore. |
+
+## Deploy
+
+Pushes to `main` on GitHub trigger a production deploy via a Vercel deploy hook (see `.github/workflows/deploy.yml`).
+
+Required GitHub secret: `VERCEL_DEPLOY_HOOK` (set in repo Settings → Secrets).
 
 ## Run locally
 
 ```bash
 npm install
-# place Admin credentials at .secrets/firebase-admin.json
 cp .env.example .env.local
+# Fill .env.local from Vercel env pull, or use .secrets/firebase-admin.json locally
 npm run dev
 ```
 
-Open [http://127.0.0.1:43173](http://127.0.0.1:43173).
+Open http://127.0.0.1:43173
 
-## Vercel
+## License
 
-Live site: https://training-eight-fawn.vercel.app
-
-Project: `training` under vidarsoders-projects. Production and Preview hold `ACCESS_PASSPHRASE`, `ATHLETE_SALT`, `SESSION_SECRET`, and `FIREBASE_SERVICE_ACCOUNT` as Sensitive secrets. Do not add `NEXT_PUBLIC_` copies of those values.
+Private use. All rights reserved.
