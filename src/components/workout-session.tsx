@@ -360,7 +360,7 @@ export function WorkoutSessionView() {
           <div className="space-y-5">
             <header>
               <Link
-                href="/"
+                href="/workout"
                 className="-ml-1 mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"
               >
                 <ChevronLeft className="size-4" />
