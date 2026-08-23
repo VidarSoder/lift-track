@@ -38,6 +38,7 @@ export type Exercise = {
   mistakes: string;
   progress: string;
   supersetWith?: string;
+  defaultLoad?: number;
 };
 
 export type ProgramDay = {

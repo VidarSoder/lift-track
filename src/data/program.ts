@@ -150,7 +150,7 @@ export const DAYS: ProgramDay[] = [
     title: "Pull · back, biceps",
     source: "Get Huge Arms + second workout",
     focus: "Build the back with pull-ups, pulldowns, and a row, then bury the biceps.",
-    durationMin: "55–70",
+    durationMin: "60–75",
     warmup: [
       "Dead hang 2×20 seconds",
       "Band face pulls 2×15",
@@ -158,7 +158,7 @@ export const DAYS: ProgramDay[] = [
       "Light lat pulldown 2×12",
     ],
     coaching:
-      "Rows and pulldowns set the posture for the curls. If the biceps are already fried after rows, that is the point — still do the curl work with a full squeeze, even if the load drops.",
+      "Heavy pull-ups first, then normal bodyweight pull-ups for extra reps. Rows and pulldowns set the posture for the curls. If the biceps are already fried after rows, that is the point — still do the curl work with a full squeeze, even if the load drops.",
     exercises: [
       {
         id: "pull-up",
@@ -174,6 +174,22 @@ export const DAYS: ProgramDay[] = [
         how: "Pull the elbows to the ribs, chest to the bar. Lower to a dead hang without losing the shoulders.",
         mistakes: "Kipping, half-reps, or shrugging the ears to the bar.",
         progress: "Add 2.5 kg after 4×8.",
+      },
+      {
+        id: "bodyweight-pull-up",
+        name: "Pull-up",
+        group: "Back",
+        sets: 3,
+        reps: "6–10",
+        restSec: 120,
+        tempo: "2-0-1-0",
+        equipment: "Pull-up bar · bodyweight",
+        defaultLoad: 0,
+        setup:
+          "Overhand, just outside the shoulders. No belt, no plates. Band only if you cannot get 6 clean reps from a dead hang.",
+        how: "Scapula down, pull the chest to the bar, lower to a full hang. Same movement as the weighted ones — just you.",
+        mistakes: "Kipping, half-reps, or turning it into a chin-up with a mixed grip.",
+        progress: "Add a rep until 3×10. Then add a set, or keep these after the weighted ones.",
       },
       {
         id: "lat-pulldown",

@@ -58,6 +58,9 @@ export function suggestedWarmup(
   step: number,
 ): { weight: number; reps: number } {
   const warm = warmupSets(existing);
+  if (workKg === 0) {
+    return { weight: 0, reps: warm.length === 0 ? 5 : 3 };
+  }
   const target = workKg != null && workKg > 0 ? workKg : 20;
   const last = [...warm].reverse().find((set) => set.weight != null)?.weight;
   const fractions = [0.5, 0.7, 0.85];
@@ -257,7 +260,11 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
       for (const set of workingSets(exercise.sets)) {
         if (!set.done || !set.weight || !set.reps) continue;
         const current = prs[exercise.exerciseId];
-        if (!current || set.weight > current.weight) {
+        if (
+          !current ||
+          set.weight > current.weight ||
+          (set.weight === current.weight && set.reps > current.reps)
+        ) {
           prs[exercise.exerciseId] = {
             weight: set.weight,
             reps: set.reps,
@@ -340,7 +347,7 @@ export function previousWarmupSets(
 
 export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | null {
   const stored = athlete.lastLoads?.[exerciseId];
-  if (stored?.weight) return stored;
+  if (stored && stored.weight != null) return stored;
   for (const day of Object.values(athlete.lastByDay)) {
     const done = [...(day?.sets[exerciseId] ?? [])]
       .reverse()

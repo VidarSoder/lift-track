@@ -17,7 +17,7 @@ Pull down from the top of any page to refresh. Cancel an open session if you wan
 | Day | Session |
 | --- | --- |
 | Mon | Push · chest, shoulders, triceps |
-| Tue | Pull · back, rear delts, biceps |
+| Tue | Pull · weighted pull-ups, then normal pull-ups, row, curls |
 | Wed | Legs · second workout |
 | Thu | Arms · Get Huge Arms day |
 | Fri | Shoulders + arm pump |

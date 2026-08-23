@@ -139,6 +139,7 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "rope-pushdown": { icon: ArrowDown, tone: TONES.dusk },
   "overhead-rope": { icon: ArrowUpFromDot, tone: TONES.ink },
   "pull-up": { icon: ArrowUpToLine, tone: TONES.slate },
+  "bodyweight-pull-up": { icon: ArrowUpToLine, tone: TONES.pine },
   "lat-pulldown": { icon: ArrowDownFromLine, tone: TONES.dusk },
   "cable-row": { icon: MoveHorizontal, tone: TONES.pine },
   "barbell-curl": { icon: RefreshCcw, tone: TONES.sage },

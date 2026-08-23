@@ -93,6 +93,7 @@ function SetRow({
   lastKg,
   kind = "work",
   units = cardioUnits(""),
+  fallbackLoad,
   onChange,
   onRemove,
 }: {
@@ -102,10 +103,11 @@ function SetRow({
   lastKg?: number | null;
   kind?: "work" | "warmup" | "extra";
   units?: ReturnType<typeof cardioUnits>;
+  fallbackLoad?: number;
   onChange: (set: LoggedSet) => void;
   onRemove?: () => void;
 }) {
-  const startWeight = previous?.weight ?? lastKg ?? units.fallbackLoad;
+  const startWeight = previous?.weight ?? lastKg ?? fallbackLoad ?? units.fallbackLoad;
   const startReps =
     previous?.reps ??
     (units.only === "work" ? units.fallbackLoad : units.work === "min" ? 6 : 8);
@@ -672,8 +674,9 @@ export function WorkoutSessionView() {
         const extraCount = Math.max(0, workLogged.length - exercise.sets);
         const units = cardioUnits(exercise.group);
         const allowWarmup = units.only !== "work";
+        const seedKg = load?.weight ?? prev[0]?.weight ?? exercise.defaultLoad ?? units.fallbackLoad;
         const warmupGuess = suggestedWarmup(
-          load?.weight ?? prev[0]?.weight ?? units.fallbackLoad,
+          seedKg,
           logged.sets,
           units.loadStep,
         );
@@ -717,7 +720,11 @@ export function WorkoutSessionView() {
                     {workLogged.filter((set) => set.done).length}/{workLogged.length} sets
                     {warmLogged.length > 0 ? ` · ${warmLogged.length} warm-up` : ""}
                     {extraCount > 0 ? ` · +${extraCount} extra` : ""}
-                    {load ? ` · last ${load.weight} ${units.load}` : ""}
+                    {load
+                      ? load.weight === 0
+                        ? ` · last BW${load.reps ? ` × ${load.reps}` : ""}`
+                        : ` · last ${load.weight} ${units.load}`
+                      : ""}
                   </p>
                 </div>
                 {done ? (
@@ -763,7 +770,11 @@ export function WorkoutSessionView() {
                         size="sm"
                         className="h-8 px-3"
                         onClick={() => {
-                          const startWeight = load?.weight ?? prev[0]?.weight ?? 20;
+                          const startWeight =
+                            load?.weight ??
+                            prev[0]?.weight ??
+                            exercise.defaultLoad ??
+                            units.fallbackLoad;
                           const startReps = prev[0]?.reps ?? 8;
                           const exercises = session.exercises.map((item) =>
                             item.exerciseId === exercise.id
@@ -808,7 +819,7 @@ export function WorkoutSessionView() {
                         return;
                       }
                       const guess = suggestedWarmup(
-                        load?.weight ?? prev[0]?.weight ?? units.fallbackLoad,
+                        seedKg,
                         logged.sets,
                         units.loadStep,
                       );
@@ -842,9 +853,11 @@ export function WorkoutSessionView() {
                   >
                     <Flame className="size-4" />
                     Warm-up set
-                    {warmupGuess.weight
-                      ? ` · ${warmupGuess.weight} ${units.load}`
-                      : ""}
+                    {warmupGuess.weight === 0
+                      ? " · BW"
+                      : warmupGuess.weight
+                        ? ` · ${warmupGuess.weight} ${units.load}`
+                        : ""}
                   </Button>
                 ) : null}
                 {logged.sets.map((set, index) => {
@@ -878,6 +891,7 @@ export function WorkoutSessionView() {
                       lastKg={set.warmup ? null : load?.weight}
                       kind={kind}
                       units={units}
+                      fallbackLoad={exercise.defaultLoad ?? units.fallbackLoad}
                       onRemove={
                         kind === "work"
                           ? undefined
@@ -938,7 +952,11 @@ export function WorkoutSessionView() {
                       }
                       const last = workLogged[workLogged.length - 1];
                       const startWeight =
-                        last?.weight ?? load?.weight ?? prev[0]?.weight ?? 20;
+                        last?.weight ??
+                        load?.weight ??
+                        prev[0]?.weight ??
+                        exercise.defaultLoad ??
+                        units.fallbackLoad;
                       const startReps = last?.reps ?? prev[0]?.reps ?? 8;
                       const exercises = session.exercises.map((item) =>
                         item.exerciseId === exercise.id

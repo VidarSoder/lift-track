@@ -118,6 +118,9 @@ function StillPhoto({
 
 function loadLabel(load: LastLoad | null) {
   if (!load) return null;
+  if (load.weight === 0) {
+    return load.reps ? `Last BW × ${load.reps}` : "Last BW";
+  }
   return load.reps
     ? `Last ${load.weight} kg × ${load.reps}`
     : `Last ${load.weight} kg`;

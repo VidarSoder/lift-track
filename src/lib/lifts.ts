@@ -40,7 +40,8 @@ function pointFromSets(
   const best = ranked[0];
   const weight =
     unit === "min" ? (best.reps ?? best.weight ?? 0) : (best.weight ?? 0);
-  if (!weight) return null;
+  if (unit === "min" && !weight) return null;
+  if (unit !== "min" && best.weight == null) return null;
   return {
     date,
     exerciseId,
@@ -88,7 +89,7 @@ export function inferredLiftLog(athlete: AthleteDoc): LiftPoint[] {
   if (stored.length > 0) return stored;
   const points: LiftPoint[] = [];
   for (const [exerciseId, load] of Object.entries(athlete.lastLoads ?? {})) {
-    if (!load.weight) continue;
+    if (load.weight == null) continue;
     points.push({
       date: load.date,
       exerciseId,
@@ -130,6 +131,9 @@ export function liftsByExercise(athlete: AthleteDoc) {
 
 export function formatLiftPoint(point: LiftPoint) {
   if (point.unit === "min") return `${point.weight} min`;
+  if (point.weight === 0) {
+    return point.reps ? `BW × ${point.reps}` : "BW";
+  }
   if (point.reps) return `${point.weight} ${point.unit ?? "kg"} × ${point.reps}`;
   return `${point.weight} ${point.unit ?? "kg"}`;
 }
