@@ -19,7 +19,7 @@ export const REST_PRESETS = [
 export function emptyTimer(sessionDate: string): SessionTimerState {
   return {
     sessionDate,
-    hidden: false,
+    hidden: true,
     running: false,
     mode: "up",
     startedAt: null,
