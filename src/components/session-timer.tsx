@@ -192,7 +192,7 @@ export function SessionTimer() {
           disabled={!state.running}
           onClick={end}
         >
-          End
+          Stop
         </Button>
         <Button
           type="button"

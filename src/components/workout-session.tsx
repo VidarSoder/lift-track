@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronDown, ChevronLeft, Flame, Plus, X } from "lucide-react";
@@ -268,7 +268,9 @@ export function WorkoutSessionView() {
   } = useTraining();
   const router = useRouter();
   const today = formatDateISO();
-  const pick = useSearchParams().get("pick");
+  const searchParams = useSearchParams();
+  const pick = searchParams.get("pick");
+  const wantEnd = searchParams.get("end") === "1";
   const [openHow, setOpenHow] = useState<string | null>(null);
   const [beforeOpen, setBeforeOpen] = useState<boolean | undefined>(undefined);
   const [afterOpen, setAfterOpen] = useState<boolean | undefined>(undefined);
@@ -359,6 +361,29 @@ export function WorkoutSessionView() {
     completeSession(finished);
     toast.success("Session finished.");
   }
+
+  function requestFinish(current = session) {
+    if (!current || current.status !== "in_progress") return;
+    if (!current.feelingAfterSaved) {
+      setAskAfter(true);
+      setAfterOpen(true);
+      toast.message("How did that feel?");
+      window.setTimeout(() => {
+        afterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+      return;
+    }
+    finishSession(current);
+  }
+
+  useEffect(() => {
+    if (!wantEnd || !session || session.status !== "in_progress") return;
+    if (!viewingSession) return;
+    router.replace("/workout");
+    requestFinish(session);
+    // Only when arriving with ?end=1
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantEnd]);
 
   if (!viewingSession) {
     if (day) {
@@ -1327,18 +1352,7 @@ export function WorkoutSessionView() {
           <Button
             size="lg"
             className="h-12 w-full text-base"
-            onClick={() => {
-              if (!session.feelingAfterSaved) {
-                setAskAfter(true);
-                setAfterOpen(true);
-                toast.message("How did that feel?");
-                window.setTimeout(() => {
-                  afterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }, 50);
-                return;
-              }
-              finishSession();
-            }}
+            onClick={() => requestFinish()}
           >
             Finish session
           </Button>
