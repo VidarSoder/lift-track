@@ -1,5 +1,6 @@
 import { upsertBikeStats } from "@/lib/bike";
 import { mergeLiftLog } from "@/lib/lifts";
+import { spanMs } from "@/lib/session-timer";
 import { ATHLETE_NAME } from "@/data/program";
 import { currentTimeOfDay, formatDateISO } from "@/lib/dates";
 import type {
@@ -183,10 +184,12 @@ function isNextCalendarDay(prev: string, next: string) {
 
 export function summarizeSession(session: WorkoutSession): SessionSummary {
   const { plannedSets, completedSets } = sessionSetCounts(session);
-  const started = new Date(session.startedAt).getTime();
-  const finished = session.finishedAt
-    ? new Date(session.finishedAt).getTime()
-    : Date.now();
+  const started = new Date(session.clockStartedAt ?? session.startedAt).getTime();
+  const finished = session.clockEndedAt
+    ? new Date(session.clockEndedAt).getTime()
+    : session.finishedAt
+      ? new Date(session.finishedAt).getTime()
+      : Date.now();
   return {
     date: session.date,
     dayId: session.dayId,
@@ -443,4 +446,40 @@ export function mergeLoads(
     };
   }
   return next;
+}
+
+export function startWorkoutClock(session: WorkoutSession): WorkoutSession {
+  if (session.clockStartedAt && session.clockEndedAt) {
+    const elapsed = spanMs(session.clockStartedAt, session.clockEndedAt);
+    return {
+      ...session,
+      clockStartedAt: new Date(Date.now() - elapsed).toISOString(),
+      clockEndedAt: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    ...session,
+    clockStartedAt: new Date().toISOString(),
+    clockEndedAt: undefined,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function stopWorkoutClock(session: WorkoutSession): WorkoutSession {
+  if (!session.clockStartedAt || session.clockEndedAt) return session;
+  return {
+    ...session,
+    clockEndedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function clearWorkoutClock(session: WorkoutSession): WorkoutSession {
+  return {
+    ...session,
+    clockStartedAt: undefined,
+    clockEndedAt: undefined,
+    updatedAt: new Date().toISOString(),
+  };
 }

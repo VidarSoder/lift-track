@@ -16,7 +16,6 @@ import {
   saveTimer,
   type SessionTimerState,
 } from "@/lib/session-timer";
-import { SessionClock } from "@/components/session-clock";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -134,24 +133,10 @@ export function SessionTimer() {
 
   const label = formatTimer(remaining);
   const idle = isIdle(state);
-  const workoutClock = todaySession ? (
-    <p className="min-w-0">
-      <span className="block text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-        Workout
-      </span>
-      <SessionClock
-        startedAt={todaySession.startedAt}
-        finishedAt={todaySession.finishedAt}
-        running
-        className="text-base font-semibold leading-tight"
-      />
-    </p>
-  ) : null;
 
   if (state.hidden) {
     return (
-      <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border/60 bg-background px-3 py-1.5">
-        {workoutClock}
+      <div className="flex shrink-0 justify-end border-t border-border/60 bg-background px-3 py-1.5">
         <button
           type="button"
           onClick={() => patch({ ...state, hidden: false })}
@@ -163,10 +148,10 @@ export function SessionTimer() {
                 ? "bg-primary/20 text-primary"
                 : "bg-secondary text-secondary-foreground",
           )}
-          aria-label={`Open rest timer ${label}`}
+          aria-label={`Open timer ${label}`}
         >
           <Timer className="size-3.5" />
-          {idle ? "Rest" : label}
+          {idle ? "Timer" : label}
         </button>
       </div>
     );
@@ -174,24 +159,23 @@ export function SessionTimer() {
 
   return (
     <div className="shrink-0 border-t border-border/60 bg-background px-3 py-2.5">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        {workoutClock}
+      <div className="flex items-center justify-between gap-3">
+        <p
+          className={cn(
+            "font-heading text-3xl font-semibold tabular-nums tracking-tight",
+            (state.running || done) && "text-primary",
+          )}
+        >
+          {label}
+        </p>
         <button
           type="button"
           className="h-9 rounded-full px-3 text-sm text-muted-foreground"
           onClick={() => patch({ ...state, hidden: true })}
         >
-          Hide rest
+          Hide
         </button>
       </div>
-      <p
-        className={cn(
-          "font-heading text-3xl font-semibold tabular-nums tracking-tight",
-          (state.running || done) && "text-primary",
-        )}
-      >
-        {label}
-      </p>
       <div className="mt-2 grid grid-cols-3 gap-2">
         <Button
           type="button"

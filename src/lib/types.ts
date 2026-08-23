@@ -126,6 +126,8 @@ export type WorkoutSession = {
   status: "in_progress" | "completed" | "skipped";
   startedAt: string;
   finishedAt?: string;
+  clockStartedAt?: string;
+  clockEndedAt?: string;
   timeOfDay: TimeOfDay;
   feelingBefore: FeelingBefore;
   feelingAfter?: FeelingAfter;

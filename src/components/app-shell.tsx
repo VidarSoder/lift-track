@@ -6,7 +6,10 @@ import { usePathname } from "next/navigation";
 import { Dumbbell, Home, Images, Settings, TrendingUp } from "lucide-react";
 import { ActiveSessionFab } from "@/components/active-session-fab";
 import { SessionTimer } from "@/components/session-timer";
+import { WorkoutBanner } from "@/components/workout-banner";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import { formatDateISO } from "@/lib/dates";
+import { isOpenSession } from "@/lib/active-session";
 import { useTraining } from "@/components/training-provider";
 import { cn } from "@/lib/utils";
 
@@ -20,14 +23,21 @@ const LINKS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { reload } = useTraining();
+  const { reload, todaySession } = useTraining();
+  const sessionOpen = isOpenSession(todaySession, formatDateISO());
 
   return (
     <div className="app-shell mx-auto flex w-full max-w-md flex-col overflow-hidden bg-background">
+      <WorkoutBanner />
       <PullToRefresh
         onRefresh={reload}
         resetKey={pathname}
-        className="px-4 pt-[max(1.5rem,calc(env(safe-area-inset-top,0px)+var(--app-top-gap)))]"
+        className={cn(
+          "px-4",
+          sessionOpen
+            ? "pt-3"
+            : "pt-[max(1.5rem,calc(env(safe-area-inset-top,0px)+var(--app-top-gap)))]",
+        )}
       >
         {children}
       </PullToRefresh>

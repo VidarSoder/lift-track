@@ -352,6 +352,9 @@ export function WorkoutSessionView() {
       feelingAfter: current.feelingAfter ?? emptyAfter(),
       feelingAfterSaved: true,
       updatedAt: new Date().toISOString(),
+      ...(current.clockStartedAt && !current.clockEndedAt
+        ? { clockEndedAt: new Date().toISOString() }
+        : {}),
     };
     completeSession(finished);
     toast.success("Session finished.");
@@ -499,19 +502,11 @@ export function WorkoutSessionView() {
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
             {session.status === "completed" ? "Logged" : "In session"}
           </p>
-          <div className="flex items-center gap-2">
-            <SessionClock
-              startedAt={session.startedAt}
-              finishedAt={session.finishedAt}
-              running={session.status === "in_progress"}
-              className="text-sm font-semibold text-foreground"
-            />
-            {counts ? (
-              <Badge variant="secondary">
-                {counts.completedSets}/{counts.plannedSets} sets
-              </Badge>
-            ) : null}
-          </div>
+          {counts ? (
+            <Badge variant="secondary">
+              {counts.completedSets}/{counts.plannedSets} sets
+            </Badge>
+          ) : null}
         </div>
         <h1 className="font-heading text-3xl leading-none">{day.title}</h1>
         <div className="flex items-center justify-between gap-3">
@@ -1357,13 +1352,13 @@ export function WorkoutSessionView() {
         <div className="space-y-3">
           <p className="text-center text-sm text-muted-foreground">
             Saved. Those loads come back the next time you run this workout.
-            {session.startedAt ? (
+            {session.clockStartedAt ? (
               <>
                 {" "}
                 You trained for{" "}
                 <SessionClock
-                  startedAt={session.startedAt}
-                  finishedAt={session.finishedAt}
+                  startedAt={session.clockStartedAt}
+                  finishedAt={session.clockEndedAt ?? session.finishedAt}
                   running={false}
                 />
                 .
