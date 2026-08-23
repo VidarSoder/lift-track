@@ -8,7 +8,7 @@ const MAX_PER_LIFT = 16;
 export function liftUnit(exerciseId: string, athlete: AthleteDoc) {
   const preset = warmupById(exerciseId);
   const exercise = resolveExercise(exerciseId, athlete);
-  if (preset?.kind === "walk" || exercise.group === "Walk") return "min";
+  if (preset?.kind === "walk" || exercise.group === "Walk") return "km/h";
   if (preset?.kind === "run" || exercise.group === "Run") return "km/h";
   if (preset?.kind === "bike" || exercise.group === "Bike") return "lvl";
   if (preset?.kind === "mobility" || exercise.group === "Mobility") return "min";

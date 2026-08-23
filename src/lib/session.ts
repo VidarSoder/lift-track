@@ -345,19 +345,29 @@ export function previousWarmupSets(
   return warmupSets(rawPreviousSets(athlete, dayId, exerciseId));
 }
 
-const BIKE_LOAD_IDS = [
-  "bike",
-  "bike-easy-8",
-  "bike-ramp-10",
-  "bike-hard-then-easy",
-];
+const CARDIO_LOAD_IDS = {
+  bike: ["bike", "bike-easy-8", "bike-ramp-10", "bike-hard-then-easy"],
+  run: ["run", "run-7-then-4", "run-easy-8", "run-walk-jog"],
+  walk: ["walk", "walk-easy", "walk-easy-10", "walk-easy-30"],
+} as const;
 
-export function lastBikeLoad(athlete: AthleteDoc): LastLoad | null {
-  for (const id of BIKE_LOAD_IDS) {
+export function lastCardioLoad(
+  athlete: AthleteDoc,
+  kind: keyof typeof CARDIO_LOAD_IDS,
+): LastLoad | null {
+  for (const id of CARDIO_LOAD_IDS[kind]) {
     const load = lastLoad(athlete, id);
-    if (load) return load;
+    if (!load) continue;
+    if (kind === "walk" && load.weight != null && load.weight > 12) {
+      return { ...load, weight: 5, reps: load.reps ?? load.weight };
+    }
+    return load;
   }
   return null;
+}
+
+export function lastBikeLoad(athlete: AthleteDoc): LastLoad | null {
+  return lastCardioLoad(athlete, "bike");
 }
 
 export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | null {

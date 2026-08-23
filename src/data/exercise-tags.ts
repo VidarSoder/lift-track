@@ -45,6 +45,9 @@ const GROUP_TAGS: Record<string, string[]> = {
     "bakre delts",
   ],
   Custom: ["custom", "eget", "egen", "egna"],
+  Bike: ["bike", "cykel", "kondition", "warmup", "uppvärmning"],
+  Run: ["run", "löpning", "lopa", "treadmill", "löpband", "uppvärmning"],
+  Walk: ["walk", "gång", "promenad", "gå", "uppvärmning"],
 };
 
 const EQUIPMENT_TAGS: Record<string, string[]> = {
@@ -413,6 +416,9 @@ export const EXERCISE_TAGS: Record<string, string[]> = {
     "nedpress",
     "trisspress",
   ],
+  bike: ["cykel", "bike", "kondition", "uppvärmning"],
+  run: ["löpning", "lopa", "treadmill", "löpband", "jogg"],
+  walk: ["gång", "promenad", "gå", "walk"],
 };
 
 export function foldSearch(value: string) {

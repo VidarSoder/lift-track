@@ -47,6 +47,15 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "walk-easy-10": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
   "walk-easy-30": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
   "walk-easy": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
+  walk: { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
+  run: { slug: "Walking", youtube: "a6d8zNwO6n8" },
+  "run-7-then-4": { slug: "Walking", youtube: "a6d8zNwO6n8" },
+  "run-easy-8": { slug: "Walking", youtube: "a6d8zNwO6n8" },
+  "run-walk-jog": { slug: "Walking", youtube: "a6d8zNwO6n8" },
+  bike: { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
+  "bike-easy-8": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
+  "bike-ramp-10": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
+  "bike-hard-then-easy": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {

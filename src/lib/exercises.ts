@@ -1,5 +1,6 @@
 import { matchesExerciseQuery } from "@/data/exercise-tags";
-import { uniqueExercises } from "@/data/program";
+import { dayById, uniqueExercises } from "@/data/program";
+import { warmupById } from "@/data/warmup";
 import type { AthleteDoc, CustomExercise, Exercise } from "@/lib/types";
 
 function customToExercise(custom: CustomExercise): Exercise {
@@ -42,6 +43,14 @@ export function resolveExercise(
 ): Exercise {
   const found = catalogExercises(athlete).find((exercise) => exercise.id === id);
   if (found) return found;
+  const warmupDay = dayById("warmup");
+  const fromWarmup = warmupDay?.exercises.find((exercise) => exercise.id === id);
+  if (fromWarmup) return fromWarmup;
+  const preset = warmupById(id);
+  const canonical = preset
+    ? warmupDay?.exercises.find((exercise) => exercise.id === preset.id)
+    : undefined;
+  if (canonical) return { ...canonical, id };
   const name = id.replace(/^custom:/, "").replace(/-/g, " ");
   return customToExercise({
     id,

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, Flame, Minus, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Flame, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";
@@ -14,7 +14,7 @@ import {
   createSession,
   emptyAfter,
   insertWarmupSet,
-  lastBikeLoad,
+  lastCardioLoad,
   lastLoad,
   liftIsDone,
   previousSets,
@@ -24,7 +24,7 @@ import {
   warmupSets,
   workingSets,
 } from "@/lib/session";
-import { cardioUnits, firstNumber, isBikeExercise, warmupById } from "@/data/warmup";
+import { cardioKind, cardioUnits, firstNumber, warmupById } from "@/data/warmup";
 import { rememberCustom, resolveExercise } from "@/lib/exercises";
 import type { LoggedSet, PinnedExercise, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
@@ -35,7 +35,8 @@ import {
 } from "@/components/exercise-guide";
 import { AddExerciseButton } from "@/components/add-exercise";
 import { DangerConfirm } from "@/components/danger-confirm";
-import { BikeRide } from "@/components/bike-ride";
+import { CardioRide } from "@/components/cardio-ride";
+import { Stepper } from "@/components/stepper";
 import { BikeStatsCard } from "@/components/bike-stats";
 import { WarmupCard } from "@/components/warmup-picker";
 import { ExerciseMark } from "@/components/exercise-mark";
@@ -55,38 +56,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const TIMES: TimeOfDay[] = ["morning", "afternoon", "evening", "night"];
-
-function nudge(value: number | null, step: number, fallback: number) {
-  const next = (value ?? fallback) + step;
-  return Math.max(0, Number(next.toFixed(1)));
-}
-
-function Stepper({
-  value,
-  unit,
-  onMinus,
-  onPlus,
-}: {
-  value: number | null;
-  unit: string;
-  onMinus: () => void;
-  onPlus: () => void;
-}) {
-  return (
-    <div className="flex min-w-0 items-center justify-between rounded-lg bg-background px-1 py-1">
-      <button type="button" className="grid size-9 shrink-0 place-items-center" onClick={onMinus}>
-        <Minus className="size-4" />
-      </button>
-      <span className="min-w-0 text-center text-sm font-semibold">
-        {value ?? "—"}
-        <span className="block text-[10px] font-normal text-muted-foreground">{unit}</span>
-      </span>
-      <button type="button" className="grid size-9 shrink-0 place-items-center" onClick={onPlus}>
-        <Plus className="size-4" />
-      </button>
-    </div>
-  );
-}
 
 function SetRow({
   label,
@@ -176,38 +145,22 @@ function SetRow({
             <Stepper
               value={set.weight}
               unit={units.load}
-              onMinus={() => {
+              step={units.loadStep}
+              fallback={startWeight}
+              onChange={(weight) => {
                 cancelClear();
-                onChange({
-                  ...set,
-                  weight: nudge(set.weight, -units.loadStep, startWeight),
-                });
-              }}
-              onPlus={() => {
-                cancelClear();
-                onChange({
-                  ...set,
-                  weight: nudge(set.weight, units.loadStep, startWeight),
-                });
+                onChange({ ...set, weight });
               }}
             />
           )}
           <Stepper
             value={set.reps}
             unit={units.work}
-            onMinus={() => {
+            step={units.workStep}
+            fallback={startReps}
+            onChange={(reps) => {
               cancelClear();
-              onChange({
-                ...set,
-                reps: nudge(set.reps, -units.workStep, startReps),
-              });
-            }}
-            onPlus={() => {
-              cancelClear();
-              onChange({
-                ...set,
-                reps: nudge(set.reps, units.workStep, startReps),
-              });
+              onChange({ ...set, reps });
             }}
           />
         </div>
@@ -349,8 +302,9 @@ export function WorkoutSessionView() {
     const next = createSession(nextDay, today, pendingExtras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
-      const fallback = isBikeExercise(exercise.exerciseId)
-        ? lastBikeLoad(athlete) ?? lastLoad(athlete, exercise.exerciseId)
+      const ride = cardioKind(exercise.exerciseId);
+      const fallback = ride
+        ? lastCardioLoad(athlete, ride) ?? lastLoad(athlete, exercise.exerciseId)
         : lastLoad(athlete, exercise.exerciseId);
       const preset = warmupById(exercise.exerciseId);
       if (preset) {
@@ -697,9 +651,9 @@ export function WorkoutSessionView() {
         const warmLogged = warmupSets(logged.sets);
         const extraCount = Math.max(0, workLogged.length - exercise.sets);
         const units = cardioUnits(exercise.group);
-        const bike = isBikeExercise(exercise.id, exercise.group);
-        const bikeLoad = bike ? lastBikeLoad(athlete) ?? load : load;
-        const allowWarmup = units.only !== "work" && !bike;
+        const ride = cardioKind(exercise.id, exercise.group);
+        const rideLoad = ride ? lastCardioLoad(athlete, ride) ?? load : load;
+        const allowWarmup = units.only !== "work" && !ride;
         const seedKg = load?.weight ?? prev[0]?.weight ?? exercise.defaultLoad ?? units.fallbackLoad;
         const warmupGuess = suggestedWarmup(
           seedKg,
@@ -743,13 +697,15 @@ export function WorkoutSessionView() {
                   </p>
                   <p className="truncate font-medium leading-tight">{exercise.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {bike
+                    {ride
                       ? `${workLogged.length} ${workLogged.length === 1 ? "block" : "blocks"} · ${workLogged.reduce((sum, set) => sum + (set.reps ?? 0), 0) || "—"} min`
                       : `${workLogged.filter((set) => set.done).length}/${workLogged.length} sets`}
                     {warmLogged.length > 0 ? ` · ${warmLogged.length} warm-up` : ""}
                     {extraCount > 0 ? ` · +${extraCount} extra` : ""}
-                    {bike && bikeLoad
-                      ? ` · last lvl ${bikeLoad.weight}`
+                    {ride && rideLoad
+                      ? ride === "bike"
+                        ? ` · last lvl ${rideLoad.weight}`
+                        : ` · last ${rideLoad.weight} km/h`
                       : load
                         ? load.weight === 0
                           ? ` · last BW${load.reps ? ` × ${load.reps}` : ""}`
@@ -801,12 +757,12 @@ export function WorkoutSessionView() {
                         className="h-8 px-3"
                         onClick={() => {
                           const startWeight =
-                            (bike ? bikeLoad?.weight : load?.weight) ??
+                            (ride ? rideLoad?.weight : load?.weight) ??
                             prev[0]?.weight ??
                             exercise.defaultLoad ??
                             units.fallbackLoad;
-                          const startReps = bike
-                            ? prev[0]?.reps ?? bikeLoad?.reps ?? 10
+                          const startReps = ride
+                            ? prev[0]?.reps ?? rideLoad?.reps ?? 10
                             : prev[0]?.reps ?? 8;
                           const exercises = session.exercises.map((item) =>
                             item.exerciseId === exercise.id
@@ -840,11 +796,12 @@ export function WorkoutSessionView() {
                     )}
                   </div>
                 </div>
-                {bike ? (
-                  <BikeRide
+                {ride ? (
+                  <CardioRide
+                    kind={ride}
                     sets={logged.sets}
-                    lastLevel={bikeLoad?.weight}
-                    lastMinutes={bikeLoad?.reps}
+                    lastLoad={rideLoad?.weight}
+                    lastMinutes={rideLoad?.reps}
                     locked={session.status === "completed"}
                     onChange={(sets) => {
                       const exercises = session.exercises.map((item) =>
@@ -923,7 +880,7 @@ export function WorkoutSessionView() {
                         : ""}
                   </Button>
                 ) : null}
-                {bike
+                {ride
                   ? null
                   : (() => {
                       function rowFor(set: LoggedSet, index: number) {
@@ -1037,7 +994,7 @@ export function WorkoutSessionView() {
                         </>
                       );
                     })()}
-                {session.status !== "completed" && !bike ? (
+                {session.status !== "completed" && !ride ? (
                   <Button
                     type="button"
                     variant="outline"

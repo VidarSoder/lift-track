@@ -625,10 +625,7 @@ export const DAYS: ProgramDay[] = [
       "This is its own session. Pick a walk, a run, or a bike. Finish it and you can still start Push, Arms, or whatever else the same day.",
     exercises: WARMUP_PRESETS.map((preset) => ({
       id: preset.id,
-      name:
-        preset.kind === "walk" || preset.kind === "bike"
-          ? warmupLabel(preset.kind)
-          : `${warmupLabel(preset.kind)} · ${preset.title}`,
+      name: warmupLabel(preset.kind),
       group: warmupLabel(preset.kind),
       sets: preset.steps.length,
       reps: preset.steps.map((step) => `${step.minutes} min`).join(" + "),
@@ -640,14 +637,15 @@ export const DAYS: ProgramDay[] = [
             ? "Exercise bike"
             : "Outdoors or treadmill",
       setup: preset.detail,
-      how: preset.steps.map((step) => `${step.minutes} min at ${step.pace}`).join(". Then "),
+      how:
+        preset.kind === "bike"
+          ? "Pick Easy 8, Ramp 10, or Hard then easy. Or set minutes and level yourself."
+          : "Pick a prefill, or set minutes and km/h the same way as the treadmill.",
       mistakes: "Turning the warm-up into the workout.",
       progress:
-        preset.kind === "walk"
-          ? "Set the minutes you actually walked, then save."
-          : preset.kind === "bike"
-            ? "Add a segment when you change level. Log km and kcal from the screen after."
-            : "Same pace is fine. Add a minute before you add speed.",
+        preset.kind === "bike"
+          ? "Add a segment when you change level. Log km and kcal from the screen after."
+          : "Same pace is fine. Add a minute before you add speed.",
     })),
   },
   {
