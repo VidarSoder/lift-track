@@ -1,6 +1,6 @@
 import { cardioUnits, warmupById } from "@/data/warmup";
 import { resolveExercise } from "@/lib/exercises";
-import type { AthleteDoc, LiftPoint, WorkoutSession } from "@/lib/types";
+import type { AthleteDoc, LiftPoint, LoggedSet, WorkoutSession } from "@/lib/types";
 
 const MAX_TOTAL = 240;
 const MAX_PER_LIFT = 16;
@@ -27,9 +27,9 @@ function pointFromSets(
   athlete: AthleteDoc,
   date: string,
   exerciseId: string,
-  sets: { weight: number | null; reps: number | null; done: boolean }[],
+  sets: LoggedSet[],
 ): LiftPoint | null {
-  const done = sets.filter((set) => set.done);
+  const done = sets.filter((set) => set.done && !set.warmup);
   if (done.length === 0) return null;
   const unit = liftUnit(exerciseId, athlete);
   const ranked = [...done].sort((a, b) => {

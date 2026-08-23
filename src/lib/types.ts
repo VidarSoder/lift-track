@@ -94,6 +94,7 @@ export type LoggedSet = {
   weight: number | null;
   reps: number | null;
   done: boolean;
+  warmup?: boolean;
 };
 
 export type FeelingBefore = {

@@ -8,6 +8,8 @@ Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that 
 
 **Settings** holds body-weight weigh-ins over time and the program start date. They save on the same athlete document. History has a chart. Removing a weigh-in is behind Edit, then two confirms. Cancel session → Remove progress is the same two-step check, because that can wipe today’s last loads.
 
+Every lift in a session has a **Warm-up set** button at the top of the set list. Tap it to add a lighter set (about half of last working kg, then it climbs). Warm-ups sit above the working sets, do not count as PRs or last load, and you can add more than one. Extra working sets stay on **Add a set**.
+
 Pull down from the top of any page to refresh. Cancel an open session if you want out — save the kg (default) or remove it. Finish always saves.
 
 ## Weekly plan

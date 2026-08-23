@@ -31,6 +31,49 @@ export function blankSets(count: number): LoggedSet[] {
   }));
 }
 
+export function isWarmupSet(set: LoggedSet) {
+  return Boolean(set.warmup);
+}
+
+export function workingSets(sets: LoggedSet[]) {
+  return sets.filter((set) => !set.warmup);
+}
+
+export function warmupSets(sets: LoggedSet[]) {
+  return sets.filter((set) => set.warmup);
+}
+
+export function insertWarmupSet(sets: LoggedSet[], warmup: LoggedSet): LoggedSet[] {
+  return [...warmupSets(sets), { ...warmup, warmup: true }, ...workingSets(sets)];
+}
+
+function roundToStep(value: number, step: number) {
+  if (step <= 0) return Number(value.toFixed(1));
+  return Number((Math.round(value / step) * step).toFixed(1));
+}
+
+export function suggestedWarmup(
+  workKg: number | null,
+  existing: LoggedSet[],
+  step: number,
+): { weight: number; reps: number } {
+  const warm = warmupSets(existing);
+  const target = workKg != null && workKg > 0 ? workKg : 20;
+  const last = [...warm].reverse().find((set) => set.weight != null)?.weight;
+  const fractions = [0.5, 0.7, 0.85];
+  const nextFraction = fractions[Math.min(warm.length, fractions.length - 1)];
+  let weight =
+    last != null
+      ? Math.max(last + step, target * nextFraction)
+      : target * (fractions[0] ?? 0.5);
+  const ceiling = workKg != null && workKg > step ? workKg - step : weight;
+  weight = Math.max(step, Math.min(weight, ceiling));
+  return {
+    weight: roundToStep(weight, step),
+    reps: warm.length === 0 ? 8 : 5,
+  };
+}
+
 export function createSession(
   day: ProgramDay,
   date = formatDateISO(),
@@ -86,7 +129,7 @@ export function sessionVolume(session: WorkoutSession) {
   return session.exercises.reduce((sum, exercise) => {
     return (
       sum +
-      exercise.sets.reduce((inner, set) => {
+      workingSets(exercise.sets).reduce((inner, set) => {
         if (!set.done || !set.weight || !set.reps) return inner;
         return inner + set.weight * set.reps;
       }, 0)
@@ -108,7 +151,8 @@ export function sessionSetCounts(session: WorkoutSession) {
 
 export function liftIsDone(exercise: SessionExercise) {
   if (exercise.done) return true;
-  return exercise.sets.length > 0 && exercise.sets.every((set) => set.done);
+  const work = workingSets(exercise.sets);
+  return work.length > 0 && work.every((set) => set.done);
 }
 
 export function lastSetsFromSession(session: WorkoutSession) {
@@ -210,7 +254,7 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
   const prs: Record<string, PersonalRecord> = { ...athlete.prs };
   if (session.dayId !== "warmup") {
     for (const exercise of session.exercises) {
-      for (const set of exercise.sets) {
+      for (const set of workingSets(exercise.sets)) {
         if (!set.done || !set.weight || !set.reps) continue;
         const current = prs[exercise.exerciseId];
         if (!current || set.weight > current.weight) {
@@ -274,12 +318,24 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
     : completed;
 }
 
+function rawPreviousSets(athlete: AthleteDoc, dayId: DayKind, exerciseId: string) {
+  return athlete.lastByDay[dayId]?.sets[exerciseId] ?? [];
+}
+
 export function previousSets(athlete: AthleteDoc, dayId: DayKind, exerciseId: string) {
-  const fromDay = athlete.lastByDay[dayId]?.sets[exerciseId];
-  if (fromDay?.some((set) => set.weight != null)) return fromDay;
+  const fromDay = workingSets(rawPreviousSets(athlete, dayId, exerciseId));
+  if (fromDay.some((set) => set.weight != null)) return fromDay;
   const load = lastLoad(athlete, exerciseId);
   if (!load) return [];
   return [{ weight: load.weight, reps: load.reps, done: false }];
+}
+
+export function previousWarmupSets(
+  athlete: AthleteDoc,
+  dayId: DayKind,
+  exerciseId: string,
+) {
+  return warmupSets(rawPreviousSets(athlete, dayId, exerciseId));
 }
 
 export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | null {
@@ -288,7 +344,7 @@ export function lastLoad(athlete: AthleteDoc, exerciseId: string): LastLoad | nu
   for (const day of Object.values(athlete.lastByDay)) {
     const done = [...(day?.sets[exerciseId] ?? [])]
       .reverse()
-      .find((set) => set.done && set.weight != null);
+      .find((set) => set.done && !set.warmup && set.weight != null);
     if (done?.weight != null && day) {
       return { weight: done.weight, reps: done.reps, date: day.date };
     }
@@ -306,7 +362,7 @@ export function mergeLoads(
   for (const exercise of session.exercises) {
     const done = [...exercise.sets]
       .reverse()
-      .find((set) => set.done && set.weight != null);
+      .find((set) => set.done && !set.warmup && set.weight != null);
     if (done?.weight == null) continue;
     next[exercise.exerciseId] = {
       weight: done.weight,

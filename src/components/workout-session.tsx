@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, Minus, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Flame, Minus, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";
@@ -13,10 +13,15 @@ import {
   blankSets,
   createSession,
   emptyAfter,
+  insertWarmupSet,
   lastLoad,
   liftIsDone,
   previousSets,
+  previousWarmupSets,
   sessionSetCounts,
+  suggestedWarmup,
+  warmupSets,
+  workingSets,
 } from "@/lib/session";
 import { cardioUnits, firstNumber, warmupById } from "@/data/warmup";
 import { rememberCustom, resolveExercise } from "@/lib/exercises";
@@ -82,20 +87,20 @@ function Stepper({
 }
 
 function SetRow({
-  index,
+  label,
   set,
   previous,
   lastKg,
-  extra,
+  kind = "work",
   units = cardioUnits(""),
   onChange,
   onRemove,
 }: {
-  index: number;
+  label: string;
   set: LoggedSet;
   previous?: LoggedSet;
   lastKg?: number | null;
-  extra?: boolean;
+  kind?: "work" | "warmup" | "extra";
   units?: ReturnType<typeof cardioUnits>;
   onChange: (set: LoggedSet) => void;
   onRemove?: () => void;
@@ -134,14 +139,18 @@ function SetRow({
     <div
       className={cn(
         "flex min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border p-2.5",
-        set.done
-          ? "border-primary/35 bg-primary/10"
-          : "border-transparent bg-secondary/60",
+        kind === "warmup"
+          ? set.done
+            ? "border-dashed border-primary/30 bg-primary/5"
+            : "border-dashed border-border bg-secondary/40"
+          : set.done
+            ? "border-primary/35 bg-primary/10"
+            : "border-transparent bg-secondary/60",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
         <span className="grid size-8 shrink-0 place-items-center text-xs font-medium text-muted-foreground">
-          {index + 1}
+          {label}
         </span>
         <div
           className={cn(
@@ -188,7 +197,7 @@ function SetRow({
             }}
           />
         </div>
-        {extra && onRemove ? (
+        {onRemove ? (
           <button
             type="button"
             className={cn(
@@ -197,8 +206,8 @@ function SetRow({
             )}
             aria-label={
               confirmRemove
-                ? `Tap again to remove extra set ${index + 1}`
-                : `Remove extra set ${index + 1}`
+                ? `Tap again to remove ${kind === "warmup" ? "warm-up" : "extra"} set ${label}`
+                : `Remove ${kind === "warmup" ? "warm-up" : "extra"} set ${label}`
             }
             onClick={() => {
               if (!confirmRemove) {
@@ -223,9 +232,13 @@ function SetRow({
           </button>
         ) : null}
       </div>
-      {previous?.weight || lastKg || extra ? (
+      {kind === "warmup" ? (
         <p className="px-1 text-[11px] text-muted-foreground">
-          {extra ? "Extra set · " : ""}
+          Warm-up · lighter, not a working set
+        </p>
+      ) : previous?.weight || lastKg || kind === "extra" ? (
+        <p className="px-1 text-[11px] text-muted-foreground">
+          {kind === "extra" ? "Extra set · " : ""}
           {durationOnly && (previous?.reps || lastKg)
             ? `Last ${previous?.reps ?? lastKg} min`
             : previous?.weight || lastKg
@@ -650,13 +663,21 @@ export function WorkoutSessionView() {
         const howOpen = openHow === exercise.id;
         const done = liftIsDone(logged);
         const open = isExpanded(exercise.id, done, exerciseIndex === 0);
-        const doneSets = logged.sets.filter((set) => set.done).length;
         function toggleHow() {
           setOpenHow((current) => (current === exercise.id ? null : exercise.id));
         }
 
-        const extraCount = Math.max(0, logged.sets.length - exercise.sets);
+        const workLogged = workingSets(logged.sets);
+        const warmLogged = warmupSets(logged.sets);
+        const extraCount = Math.max(0, workLogged.length - exercise.sets);
         const units = cardioUnits(exercise.group);
+        const allowWarmup = units.only !== "work";
+        const warmupGuess = suggestedWarmup(
+          load?.weight ?? prev[0]?.weight ?? units.fallbackLoad,
+          logged.sets,
+          units.loadStep,
+        );
+        const prevWarm = previousWarmupSets(athlete, session.dayId, exercise.id);
 
         return (
           <Card
@@ -693,7 +714,8 @@ export function WorkoutSessionView() {
                   </p>
                   <p className="truncate font-medium leading-tight">{exercise.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {doneSets}/{logged.sets.length} sets
+                    {workLogged.filter((set) => set.done).length}/{workLogged.length} sets
+                    {warmLogged.length > 0 ? ` · ${warmLogged.length} warm-up` : ""}
                     {extraCount > 0 ? ` · +${extraCount} extra` : ""}
                     {load ? ` · last ${load.weight} ${units.load}` : ""}
                   </p>
@@ -748,12 +770,16 @@ export function WorkoutSessionView() {
                               ? {
                                   ...item,
                                   done: true,
-                                  sets: item.sets.map((set) => ({
-                                    ...set,
-                                    weight: set.weight ?? startWeight,
-                                    reps: set.reps ?? startReps,
-                                    done: true,
-                                  })),
+                                  sets: item.sets.map((set) =>
+                                    set.warmup
+                                      ? set
+                                      : {
+                                          ...set,
+                                          weight: set.weight ?? startWeight,
+                                          reps: set.reps ?? startReps,
+                                          done: true,
+                                        },
+                                  ),
                                 }
                               : item,
                           );
@@ -771,66 +797,146 @@ export function WorkoutSessionView() {
                     )}
                   </div>
                 </div>
-                {logged.sets.map((set, index) => (
-                  <SetRow
-                    key={`${exercise.id}-${index}`}
-                    index={index}
-                    set={set}
-                    previous={prev[index] ?? (index > 0 ? logged.sets[index - 1] : undefined)}
-                    lastKg={load?.weight}
-                    extra={index >= exercise.sets}
-                    units={units}
-                    onRemove={
-                      index >= exercise.sets
-                        ? () => {
-                            const exercises = session.exercises.map((item) => {
-                              if (item.exerciseId !== exercise.id) return item;
-                              const sets = item.sets.filter((_, setIndex) => setIndex !== index);
-                              return {
-                                ...item,
-                                sets,
-                                done: sets.length > 0 && sets.every((entry) => entry.done),
-                              };
-                            });
-                            patch({ ...session, exercises }, true);
-                          }
-                        : undefined
-                    }
-                    onChange={(nextSet) => {
-                      const exercises = session.exercises.map((item) => {
-                        if (item.exerciseId !== exercise.id) return item;
-                        const sets = item.sets.map((current, setIndex) =>
-                          setIndex === index ? nextSet : current,
-                        );
-                        const allDone = sets.every((entry) => entry.done);
-                        return { ...item, sets, done: allDone };
-                      });
-                      const nowDone = Boolean(
-                        exercises.find((item) => item.exerciseId === exercise.id)
-                          ?.done,
-                      );
-                      patch({ ...session, exercises }, nextSet.done);
-                      if (nextSet.done && nowDone && !done) {
-                        celebrateDone(exercise.name, exercise.id);
-                        setExpanded((current) => ({
-                          ...current,
-                          [exercise.id]: false,
-                        }));
+                {session.status !== "completed" && allowWarmup ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-12 w-full min-w-0"
+                    onClick={() => {
+                      if (warmLogged.length >= 6) {
+                        toast.message("That's enough warm-up sets for this lift.");
+                        return;
                       }
+                      const guess = suggestedWarmup(
+                        load?.weight ?? prev[0]?.weight ?? units.fallbackLoad,
+                        logged.sets,
+                        units.loadStep,
+                      );
+                      const lastWarm = warmLogged[warmLogged.length - 1];
+                      const remembered = prevWarm[warmLogged.length];
+                      const exercises = session.exercises.map((item) =>
+                        item.exerciseId === exercise.id
+                          ? {
+                              ...item,
+                              sets: insertWarmupSet(item.sets, {
+                                weight:
+                                  remembered?.weight ??
+                                  lastWarm?.weight ??
+                                  guess.weight,
+                                reps:
+                                  remembered?.reps ??
+                                  lastWarm?.reps ??
+                                  guess.reps,
+                                done: false,
+                                warmup: true,
+                              }),
+                            }
+                          : item,
+                      );
+                      patch({ ...session, exercises });
+                      setExpanded((current) => ({
+                        ...current,
+                        [exercise.id]: true,
+                      }));
                     }}
-                  />
-                ))}
+                  >
+                    <Flame className="size-4" />
+                    Warm-up set
+                    {warmupGuess.weight
+                      ? ` · ${warmupGuess.weight} ${units.load}`
+                      : ""}
+                  </Button>
+                ) : null}
+                {logged.sets.map((set, index) => {
+                  const warmupIndex = set.warmup
+                    ? logged.sets.slice(0, index).filter((entry) => entry.warmup).length
+                    : -1;
+                  const workIndex = set.warmup
+                    ? -1
+                    : logged.sets.slice(0, index).filter((entry) => !entry.warmup)
+                        .length;
+                  const kind = set.warmup
+                    ? "warmup"
+                    : workIndex >= exercise.sets
+                      ? "extra"
+                      : "work";
+                  const previous = set.warmup
+                    ? prevWarm[warmupIndex] ??
+                      (warmupIndex > 0 ? warmLogged[warmupIndex - 1] : undefined)
+                    : prev[workIndex] ??
+                      (workIndex > 0 ? workLogged[workIndex - 1] : undefined);
+                  return (
+                    <SetRow
+                      key={
+                        set.warmup
+                          ? `${exercise.id}-wu-${warmupIndex}`
+                          : `${exercise.id}-work-${workIndex}`
+                      }
+                      label={set.warmup ? `W${warmupIndex + 1}` : String(workIndex + 1)}
+                      set={set}
+                      previous={previous}
+                      lastKg={set.warmup ? null : load?.weight}
+                      kind={kind}
+                      units={units}
+                      onRemove={
+                        kind === "work"
+                          ? undefined
+                          : () => {
+                              const exercises = session.exercises.map((item) => {
+                                if (item.exerciseId !== exercise.id) return item;
+                                const sets = item.sets.filter(
+                                  (_, setIndex) => setIndex !== index,
+                                );
+                                return {
+                                  ...item,
+                                  sets,
+                                  done: liftIsDone({ ...item, sets, done: false }),
+                                };
+                              });
+                              patch({ ...session, exercises }, true);
+                            }
+                      }
+                      onChange={(nextSet) => {
+                        const exercises = session.exercises.map((item) => {
+                          if (item.exerciseId !== exercise.id) return item;
+                          const sets = item.sets.map((current, setIndex) =>
+                            setIndex === index
+                              ? { ...nextSet, warmup: set.warmup }
+                              : current,
+                          );
+                          return {
+                            ...item,
+                            sets,
+                            done: liftIsDone({ ...item, sets, done: false }),
+                          };
+                        });
+                        const nowDone = Boolean(
+                          exercises.find((item) => item.exerciseId === exercise.id)
+                            ?.done,
+                        );
+                        patch({ ...session, exercises }, nextSet.done);
+                        if (nextSet.done && nowDone && !done) {
+                          celebrateDone(exercise.name, exercise.id);
+                          setExpanded((current) => ({
+                            ...current,
+                            [exercise.id]: false,
+                          }));
+                        }
+                      }}
+                    />
+                  );
+                })}
                 {session.status !== "completed" ? (
                   <Button
                     type="button"
                     variant="outline"
                     className="h-11 w-full min-w-0"
                     onClick={() => {
-                      if (logged.sets.length >= exercise.sets + 8) {
+                      if (workLogged.length >= exercise.sets + 8) {
                         toast.message("That's enough extra sets for this lift.");
                         return;
                       }
-                      const last = logged.sets[logged.sets.length - 1];
+                      const last = workLogged[workLogged.length - 1];
                       const startWeight =
                         last?.weight ?? load?.weight ?? prev[0]?.weight ?? 20;
                       const startReps = last?.reps ?? prev[0]?.reps ?? 8;
