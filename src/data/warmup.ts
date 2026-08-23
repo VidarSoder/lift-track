@@ -1,4 +1,4 @@
-import type { WarmupKind, WarmupPreset } from "@/lib/types";
+import type { Exercise, WarmupKind, WarmupPreset } from "@/lib/types";
 
 const LEGACY_BIKE_IDS = new Set([
   "bike-easy-8",
@@ -194,7 +194,7 @@ export type CardioUnits = {
   loadStep: number;
   workStep: number;
   fallbackLoad: number;
-  only?: "work";
+  only?: "work" | "reps";
 };
 
 export function cardioUnits(group: string): CardioUnits {
@@ -211,4 +211,12 @@ export function cardioUnits(group: string): CardioUnits {
     return { load: "rpe", work: "min", loadStep: 1, workStep: 1, fallbackLoad: 3 };
   }
   return { load: "kg", work: "reps", loadStep: 2.5, workStep: 1, fallbackLoad: 20 };
+}
+
+export function exerciseUnits(exercise: Exercise): CardioUnits {
+  const base = cardioUnits(exercise.group);
+  if (exercise.bodyweight) {
+    return { ...base, only: "reps", fallbackLoad: 0 };
+  }
+  return base;
 }

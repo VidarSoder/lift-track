@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { BackLink } from "@/components/back-link";
+import { CloseButton } from "@/components/close-button";
 import { DangerConfirm } from "@/components/danger-confirm";
 import { WeightChart, BmiChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
@@ -21,6 +22,7 @@ import {
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import {
   clampKg,
+  bodyWeightForDate,
   latestWeight,
   parseKgInput,
   removeBodyWeight,
@@ -102,15 +104,21 @@ export function WeightSettingsView() {
   const [date, setDate] = useState(formatDateISO());
   const [editingHistory, setEditingHistory] = useState(false);
   const [showBmi, setShowBmi] = useState(false);
+  const [editingToday, setEditingToday] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{
     date: string;
     kg: number;
   } | null>(null);
   const slider = weighInSliderBounds(kg);
+  const todayStr = formatDateISO();
+  const todayEntry = bodyWeightForDate(athlete, todayStr);
+  const alreadyLoggedToday = todayEntry != null;
 
   function saveWeight() {
-    const next = upsertBodyWeight(athlete, { date, kg });
+    const saveDate = editingToday || !alreadyLoggedToday ? todayStr : date;
+    const next = upsertBodyWeight(athlete, { date: saveDate, kg });
     setAthlete(next, { immediate: true });
+    setEditingToday(false);
     toast.success(`Saved ${kg.toFixed(1)} kg`);
   }
 
@@ -158,63 +166,115 @@ export function WeightSettingsView() {
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="kg">New weigh-in</Label>
-            <div className="rounded-2xl bg-secondary px-4 py-4">
-              <div className="flex items-baseline justify-center gap-1.5">
-                <input
-                  id="kg"
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={typedKg ?? kg.toFixed(1)}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setTypedKg(next);
-                    const parsed = parseKgInput(next);
-                    if (parsed != null) setKg(parsed);
+            {alreadyLoggedToday && !editingToday ? (
+              <>
+                <div>
+                  <p className="text-xs text-muted-foreground">Today</p>
+                  <p className="font-heading text-4xl leading-none">
+                    {todayEntry!.kg.toFixed(1)}
+                    <span className="ml-1 text-base font-normal text-muted-foreground">
+                      kg
+                    </span>
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    You already logged today.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 w-full"
+                  onClick={() => {
+                    setKg(todayEntry!.kg);
+                    setTypedKg(null);
+                    setDate(todayStr);
+                    setEditingToday(true);
                   }}
-                  onBlur={() => setTypedKg(null)}
-                  aria-label="Body weight in kilograms"
-                  className="font-heading w-36 bg-transparent text-center text-5xl font-semibold tracking-tight tabular-nums outline-none"
-                />
-                <span className="text-sm text-muted-foreground">kg</span>
-              </div>
-              <Slider
-                className="mt-5"
-                min={slider.min}
-                max={slider.max}
-                step={0.1}
-                value={[kg]}
-                onValueChange={(value) => {
-                  const next = Array.isArray(value) ? value[0] : value;
-                  if (typeof next !== "number") return;
-                  setTypedKg(null);
-                  setKg(clampKg(next));
-                }}
-                aria-label="Body weight slider"
-              />
-              <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
-                <span>{slider.min.toFixed(0)}</span>
-                <span>Slide or type · 0.1 kg</span>
-                <span>{slider.max.toFixed(0)}</span>
-              </div>
-            </div>
-          </div>
+                >
+                  Update?
+                </Button>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="kg">
+                  {editingToday ? "Update today’s weigh-in" : "New weigh-in"}
+                </Label>
+                <div className="rounded-2xl bg-secondary px-4 py-4">
+                  <div className="flex items-baseline justify-center gap-1.5">
+                    <input
+                      id="kg"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={typedKg ?? kg.toFixed(1)}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setTypedKg(next);
+                        const parsed = parseKgInput(next);
+                        if (parsed != null) setKg(parsed);
+                      }}
+                      onBlur={() => setTypedKg(null)}
+                      aria-label="Body weight in kilograms"
+                      className="font-heading w-36 bg-transparent text-center text-5xl font-semibold tracking-tight tabular-nums outline-none"
+                    />
+                    <span className="text-sm text-muted-foreground">kg</span>
+                  </div>
+                  <Slider
+                    className="mt-5"
+                    min={slider.min}
+                    max={slider.max}
+                    step={0.1}
+                    value={[kg]}
+                    onValueChange={(value) => {
+                      const next = Array.isArray(value) ? value[0] : value;
+                      if (typeof next !== "number") return;
+                      setTypedKg(null);
+                      setKg(clampKg(next));
+                    }}
+                    aria-label="Body weight slider"
+                  />
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
+                    <span>{slider.min.toFixed(0)}</span>
+                    <span>Slide or type · 0.1 kg</span>
+                    <span>{slider.max.toFixed(0)}</span>
+                  </div>
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="weigh-date">Date</Label>
-            <Input
-              id="weigh-date"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className="h-11"
-            />
-          </div>
+                {editingToday ? (
+                  <p className="text-xs text-muted-foreground">
+                    Updating today’s entry ({formatNiceDate(todayStr)}).
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="weigh-date">Date</Label>
+                    <Input
+                      id="weigh-date"
+                      type="date"
+                      value={date}
+                      onChange={(event) => setDate(event.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                )}
 
-          <Button size="lg" className="h-12 w-full" onClick={saveWeight}>
-            Save weight
-          </Button>
+                <div className="flex gap-2">
+                  <Button size="lg" className="h-12 flex-1" onClick={saveWeight}>
+                    {editingToday ? "Update weight" : "Save weight"}
+                  </Button>
+                  {editingToday ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12"
+                      onClick={() => setEditingToday(false)}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -272,6 +332,15 @@ export function WeightSettingsView() {
                 ) : null}
                 {showBmi && current && metrics ? (
                   <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        BMI details
+                      </p>
+                      <CloseButton
+                        onClick={() => setShowBmi(false)}
+                        label="Close BMI details"
+                      />
+                    </div>
                     <BmiDetails metrics={metrics} />
                     <div className="space-y-1.5 border-t border-border/60 pt-3">
                       <p className="text-xs font-medium text-muted-foreground">

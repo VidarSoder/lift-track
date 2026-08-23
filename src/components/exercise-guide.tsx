@@ -7,6 +7,8 @@ import type { Exercise, LastLoad } from "@/lib/types";
 import { mediaFor, photoUrl, youtubeThumb, youtubeWatch } from "@/data/media";
 import { lastLoad } from "@/lib/session";
 import { ExerciseMark, markEdge } from "@/components/exercise-mark";
+import { CloseButton } from "@/components/close-button";
+import { SwipeDismissRow } from "@/components/swipe-dismiss-row";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -89,32 +91,26 @@ export function ExerciseThumb({
       </div>
     );
   }
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return (
+      <img
+        src={youtubeThumb(media.youtube)}
+        alt={name}
+        className={cn("h-full w-full bg-black object-cover", className)}
+      />
+    );
+  }
   return (
     <img
       src={photoUrl(media.slug, 0)}
       alt={name}
       className={cn("h-full w-full bg-black object-cover", className)}
+      onError={() => setBroken(true)}
     />
   );
 }
 
-function StillPhoto({
-  slug,
-  alt,
-  className,
-}: {
-  slug: string;
-  alt: string;
-  className?: string;
-}) {
-  return (
-    <img
-      src={photoUrl(slug, 0)}
-      alt={alt}
-      className={cn("h-full w-full bg-black object-cover", className)}
-    />
-  );
-}
 
 function loadLabel(load: LastLoad | null) {
   if (!load) return null;
@@ -131,17 +127,19 @@ export function ExerciseRow({
   open,
   onToggle,
   load,
+  onDismiss,
 }: {
   exercise: Exercise;
   open: boolean;
   onToggle: () => void;
   load?: LastLoad | null;
+  onDismiss?: () => void;
 }) {
   const media = mediaFor(exercise.id);
   const last = loadLabel(load ?? null);
   const tags = displayTags(exercise);
 
-  return (
+  const row = (
     <article
       className={cn(
         "overflow-hidden rounded-2xl border border-border border-l-2 bg-card",
@@ -154,7 +152,9 @@ export function ExerciseRow({
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
         <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
-          {media ? <StillPhoto slug={media.slug} alt={exercise.name} /> : null}
+          {media ? (
+            <ExerciseThumb exerciseId={exercise.id} name={exercise.name} />
+          ) : null}
         </div>
         <ExerciseMark id={exercise.id} size="sm" />
         <div className="min-w-0 flex-1">
@@ -190,13 +190,7 @@ export function ExerciseRow({
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
               How it moves
             </p>
-            <button
-              type="button"
-              onClick={onToggle}
-              className="text-xs font-medium text-primary"
-            >
-              Close
-            </button>
+            <CloseButton onClick={onToggle} label="Close exercise guide" />
           </div>
 
           {media ? (
@@ -260,9 +254,20 @@ export function ExerciseRow({
       ) : null}
     </article>
   );
+
+  if (onDismiss) {
+    return <SwipeDismissRow onDismiss={onDismiss}>{row}</SwipeDismissRow>;
+  }
+  return row;
 }
 
-export function ExerciseList({ exercises }: { exercises: Exercise[] }) {
+export function ExerciseList({
+  exercises,
+  onDismissExercise,
+}: {
+  exercises: Exercise[];
+  onDismissExercise?: (exerciseId: string) => void;
+}) {
   const { athlete } = useTraining();
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -276,6 +281,11 @@ export function ExerciseList({ exercises }: { exercises: Exercise[] }) {
           open={openId === exercise.id}
           onToggle={() =>
             setOpenId((current) => (current === exercise.id ? null : exercise.id))
+          }
+          onDismiss={
+            onDismissExercise
+              ? () => onDismissExercise(exercise.id)
+              : undefined
           }
         />
       ))}
@@ -377,6 +387,17 @@ export function ExerciseHowPanel({
   );
 }
 
-export function WorkoutExercisePreview({ exercises }: { exercises: Exercise[] }) {
-  return <ExerciseList exercises={exercises} />;
+export function WorkoutExercisePreview({
+  exercises,
+  onDismissExercise,
+}: {
+  exercises: Exercise[];
+  onDismissExercise?: (exerciseId: string) => void;
+}) {
+  return (
+    <ExerciseList
+      exercises={exercises}
+      onDismissExercise={onDismissExercise}
+    />
+  );
 }

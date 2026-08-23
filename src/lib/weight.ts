@@ -29,6 +29,10 @@ export function latestWeight(athlete: AthleteDoc) {
   return weightLog(athlete)[0] ?? null;
 }
 
+export function bodyWeightForDate(athlete: AthleteDoc, date: string) {
+  return weightLog(athlete).find((item) => item.date === date) ?? null;
+}
+
 export function upsertBodyWeight(athlete: AthleteDoc, entry: BodyWeight): AthleteDoc {
   const kg = clampKg(entry.kg);
   const next = [

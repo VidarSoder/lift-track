@@ -7,55 +7,79 @@ const PHOTO =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 
 export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
-  "bench-press": { slug: "Barbell_Bench_Press_-_Medium_Grip", youtube: "es2HcgKWMvs" },
-  "machine-bench": { slug: "Machine_Bench_Press", youtube: "xumixjXtPFk" },
-  "incline-db-press": { slug: "Incline_Dumbbell_Press", youtube: "8iPEnn-ltWE" },
-  "pec-deck": { slug: "Butterfly", youtube: "eGjt4lk6g88" },
+  "bench-press": {
+    slug: "Barbell_Bench_Press_-_Medium_Grip",
+    youtube: "rT7DgCr-3pg",
+  },
+  "machine-bench": { slug: "Machine_Bench_Press", youtube: "xUm0BiZCWlQ" },
+  "incline-db-press": { slug: "Incline_Dumbbell_Press", youtube: "8iPEnn-ltC8" },
+  "pec-deck": { slug: "Butterfly", youtube: "Qr7dstCeYtw" },
   "seated-db-press": { slug: "Seated_Dumbbell_Press", youtube: "qEwKCR5JCog" },
   "weighted-dip": { slug: "Dips_-_Triceps_Version", youtube: "2z8JmcrW-As" },
-  "skull-crusher": { slug: "Decline_EZ_Bar_Triceps_Extension", youtube: "d_KZxkY_0cM" },
-  "rope-pushdown": { slug: "Triceps_Pushdown_-_Rope_Attachment", youtube: "nlDC_nk2YI0" },
-  "overhead-rope": { slug: "Cable_Rope_Overhead_Triceps_Extension", youtube: "IrVOhK0pNAE" },
+  "skull-crusher": {
+    slug: "Decline_EZ_Bar_Triceps_Extension",
+    youtube: "d_KZxkY_0cM",
+  },
+  "rope-pushdown": {
+    slug: "Triceps_Pushdown_-_Rope_Attachment",
+    youtube: "2-LAMcpzODU",
+  },
+  "overhead-rope": {
+    slug: "Cable_Rope_Overhead_Triceps_Extension",
+    youtube: "b_r_LW4HEcM",
+  },
   "pull-up": { slug: "Pullups", youtube: "eGo4IYlbE5g" },
   "bodyweight-pull-up": { slug: "Pullups", youtube: "eGo4IYlbE5g" },
   "lat-pulldown": { slug: "Wide-Grip_Lat_Pulldown", youtube: "CAwf7n6Luuc" },
-  "cable-row": { slug: "Seated_Cable_Rows", youtube: "G8l_8chR5TU" },
+  "cable-row": { slug: "Seated_Cable_Rows", youtube: "GZbfZ033f74" },
   "barbell-curl": { slug: "Barbell_Curl", youtube: "kwG2ipFRgfo" },
   "db-curl": { slug: "Dumbbell_Bicep_Curl", youtube: "ykJmrZ5v0Oo" },
-  "incline-curl": { slug: "Incline_Dumbbell_Curl", youtube: "soxrZl3sPVY" },
+  "incline-curl": { slug: "Incline_Dumbbell_Curl", youtube: "soxrZlIl35U" },
   "hammer-curl": { slug: "Alternate_Hammer_Curl", youtube: "TwD-YGVP4Bk" },
-  "goblet-squat": { slug: "Goblet_Squat", youtube: "MeWKdoCcXg0" },
-  "bulgarian-split-squat": { slug: "Split_Squat_with_Dumbbells", youtube: "2C-uNgKwPLE" },
-  "hip-thrust": { slug: "Barbell_Hip_Thrust", youtube: "Zp26L8-lyQM" },
-  "leg-press": { slug: "Leg_Press", youtube: "IZqNpxJ7L_A" },
-  "hack-squat": { slug: "Hack_Squat", youtube: "rYgNArlw86k" },
+  "goblet-squat": { slug: "Goblet_Squat", youtube: "MeIiIdhvXT4" },
+  "bulgarian-split-squat": {
+    slug: "Split_Squat_with_Dumbbells",
+    youtube: "2C-uNgKwPLE",
+  },
+  "hip-thrust": { slug: "Barbell_Hip_Thrust", youtube: "SEdqd1n0cvg" },
+  "leg-press": { slug: "Leg_Press", youtube: "IZxyjW7MPJQ" },
+  "hack-squat": { slug: "Hack_Squat", youtube: "0tn5K9NlCfo" },
   "leg-curl": { slug: "Lying_Leg_Curls", youtube: "1Tq3QdYUuHs" },
-  "calf-raise": { slug: "Standing_Calf_Raises", youtube: "gwLzQxJg7lI" },
+  "calf-raise": { slug: "Standing_Calf_Raises", youtube: "YMmgqO8Jo-k" },
   "knee-raise": { slug: "Hanging_Leg_Raise", youtube: "Pr1ieGZ5atk" },
-  "cg-bench": { slug: "Close-Grip_Barbell_Bench_Press", youtube: "nEF0bv2FW94" },
+  "cg-bench": {
+    slug: "Close-Grip_Barbell_Bench_Press",
+    youtube: "nEF0bv2FW94",
+  },
   "ez-curl-arms": { slug: "Close-Grip_EZ_Bar_Curl", youtube: "kwG2ipFRgfo" },
-  "oh-db-extension": { slug: "Standing_Dumbbell_Triceps_Extension", youtube: "-Vyt2QdsR7E" },
-  "incline-curl-arms": { slug: "Incline_Dumbbell_Curl", youtube: "soxrZl3sPVY" },
-  "pushdown-arms": { slug: "Triceps_Pushdown", youtube: "nlDC_nk2YI0" },
-  "spider-curl": { slug: "Spider_Curl", youtube: "keM0QW5x7eE" },
+  "oh-db-extension": {
+    slug: "Standing_Dumbbell_Triceps_Extension",
+    youtube: "-Vyt2QdsR7E",
+  },
+  "incline-curl-arms": { slug: "Incline_Dumbbell_Curl", youtube: "soxrZlIl35U" },
+  "pushdown-arms": { slug: "Triceps_Pushdown", youtube: "2-LAMcpzODU" },
+  "spider-curl": { slug: "Spider_Curl", youtube: "CITtSuda0Fg" },
   "lateral-raise": { slug: "Side_Lateral_Raise", youtube: "3VcKaXpzqRo" },
-  "chest-supported-row": { slug: "Incline_Bench_Pull", youtube: "0G2_XV7sl0Q" },
-  "cable-curl-fri": { slug: "Standing_Biceps_Cable_Curl", youtube: "N6R5tYbYKg8" },
-  "pushdown-fri": { slug: "Triceps_Pushdown", youtube: "nlDC_nk2YI0" },
-  "zone2-walk": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  "arm-care": { slug: "External_Rotation", youtube: "JyDFNGQQdvw" },
-  "walk-easy-10": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  "walk-easy-30": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  "walk-easy": { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  walk: { slug: "Bodyweight_Walking_Lunge", youtube: "a6d8zNwO6n8" },
-  run: { slug: "Walking", youtube: "a6d8zNwO6n8" },
-  "run-7-then-4": { slug: "Walking", youtube: "a6d8zNwO6n8" },
-  "run-easy-8": { slug: "Walking", youtube: "a6d8zNwO6n8" },
-  "run-walk-jog": { slug: "Walking", youtube: "a6d8zNwO6n8" },
-  bike: { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
-  "bike-easy-8": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
-  "bike-ramp-10": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
-  "bike-hard-then-easy": { slug: "Recumbent_Exercise_Bike", youtube: "7i-gwm7pK8Q" },
+  "chest-supported-row": { slug: "Incline_Bench_Pull", youtube: "h2Xafysr43E" },
+  "cable-curl-fri": {
+    slug: "Standing_Biceps_Cable_Curl",
+    youtube: "NFzTWp2qpiE",
+  },
+  "pushdown-fri": { slug: "Triceps_Pushdown", youtube: "2-LAMcpzODU" },
+  "zone2-walk": { slug: "Bodyweight_Walking_Lunge", youtube: "RO1IRfIKlWM" },
+  "arm-care": { slug: "External_Rotation", youtube: "FM1B4lIgk8g" },
+  "walk-easy-10": { slug: "Bodyweight_Walking_Lunge", youtube: "RO1IRfIKlWM" },
+  "walk-easy-30": { slug: "Bodyweight_Walking_Lunge", youtube: "RO1IRfIKlWM" },
+  "walk-easy": { slug: "Bodyweight_Walking_Lunge", youtube: "RO1IRfIKlWM" },
+  walk: { slug: "Bodyweight_Walking_Lunge", youtube: "RO1IRfIKlWM" },
+  run: { slug: "Jogging_Treadmill", youtube: "btKgKarX5CY" },
+  "run-7-then-4": { slug: "Jogging_Treadmill", youtube: "btKgKarX5CY" },
+  "run-easy-8": { slug: "Jogging_Treadmill", youtube: "btKgKarX5CY" },
+  "run-walk-jog": { slug: "Jogging_Treadmill", youtube: "btKgKarX5CY" },
+  bike: { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
+  "bike-easy-8": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
+  "bike-ramp-10": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
+  "bike-hard-then-easy": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {
@@ -63,15 +87,15 @@ export function photoUrl(slug: string, frame: 0 | 1) {
 }
 
 export function youtubeThumb(id: string) {
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  return `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 }
 
 export function youtubeWatch(id: string) {
-  return `https://www.youtube.com/watch?v=${id}`;
+  return `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 }
 
 export function youtubeEmbed(id: string) {
-  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`;
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0&modestbranding=1`;
 }
 
 export function mediaFor(exerciseId: string) {

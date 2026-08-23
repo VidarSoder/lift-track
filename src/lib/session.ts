@@ -201,11 +201,15 @@ export function sessionVolume(session: WorkoutSession) {
     return (
       sum +
       workingSets(exercise.sets).reduce((inner, set) => {
-        if (!set.done || !set.weight || !set.reps) return inner;
+        if (!set.done || set.weight == null || !set.reps) return inner;
         return inner + set.weight * set.reps;
       }, 0)
     );
   }, 0);
+}
+
+export function beforeCheckInDone(session: WorkoutSession) {
+  return Boolean(session.feelingBeforeSaved || session.feelingBeforeSkipped);
 }
 
 export function sessionHasProgress(session: WorkoutSession) {

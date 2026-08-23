@@ -199,6 +199,7 @@ export const DAYS: ProgramDay[] = [
         restSec: 120,
         tempo: "2-0-1-0",
         equipment: "Pull-up bar · bodyweight",
+        bodyweight: true,
         defaultLoad: 0,
         setup:
           "Overhand, just outside the shoulders. No belt, no plates. Band only if you cannot get 6 clean reps from a dead hang.",

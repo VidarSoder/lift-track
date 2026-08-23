@@ -39,6 +39,9 @@ export type Exercise = {
   progress: string;
   supersetWith?: string;
   defaultLoad?: number;
+  loadStep?: number;
+  /** No added load — log reps only (e.g. bodyweight pull-ups). */
+  bodyweight?: boolean;
 };
 
 export type ProgramDay = {
@@ -132,6 +135,7 @@ export type WorkoutSession = {
   feelingBefore: FeelingBefore;
   feelingAfter?: FeelingAfter;
   feelingBeforeSaved?: boolean;
+  feelingBeforeSkipped?: boolean;
   feelingAfterSaved?: boolean;
   warmup?: WarmupLog;
   bikeStats?: BikeStats;

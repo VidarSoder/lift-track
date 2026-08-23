@@ -95,6 +95,7 @@ export function Stepper({
             />
             <span className="block text-[10px] font-normal text-muted-foreground">
               {unit}
+              {!editing ? ` · tap to type · ±${step}` : ""}
             </span>
           </div>
         ) : (
@@ -111,6 +112,7 @@ export function Stepper({
             </span>
             <span className="block text-[10px] font-normal text-muted-foreground">
               {unit}
+              {!editing ? ` · tap to type · ±${step}` : ""}
             </span>
           </button>
         )}

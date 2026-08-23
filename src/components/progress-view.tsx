@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { CloseButton } from "@/components/close-button";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
@@ -231,6 +232,12 @@ export function ProgressView() {
                     )}
                     {open ? (
                       <div className="mt-3 space-y-1.5">
+                        <div className="flex justify-end">
+                          <CloseButton
+                            onClick={() => setOpenId(null)}
+                            label="Close lift history"
+                          />
+                        </div>
                         {[...item.points].reverse().map((point) => (
                           <div
                             key={`${point.date}-${point.weight}-${point.reps}`}

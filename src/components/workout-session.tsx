@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Check, ChevronDown, Flame, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { CloseButton } from "@/components/close-button";
 import { FEEL_GUIDE, dayById } from "@/data/program";
 import { isOpenSession, todaysSession } from "@/lib/active-session";
 import { formatDateISO, suggestedWindow } from "@/lib/dates";
@@ -15,6 +16,7 @@ import {
   emptyAfter,
   insertWarmupSet,
   forgetTodaysLift,
+  beforeCheckInDone,
   lastCardioLoad,
   lastLoad,
   sessionHasProgress,
@@ -26,7 +28,8 @@ import {
   warmupSets,
   workingSets,
 } from "@/lib/session";
-import { cardioKind, cardioUnits, firstNumber, warmupById } from "@/data/warmup";
+import { resolveLoadHints } from "@/data/load-hints";
+import { cardioKind, exerciseUnits, firstNumber, warmupById } from "@/data/warmup";
 import { rememberCustom, resolveExercise } from "@/lib/exercises";
 import type { LoggedSet, PinnedExercise, TimeOfDay, WorkoutSession } from "@/lib/types";
 import {
@@ -65,7 +68,7 @@ function SetRow({
   previous,
   lastKg,
   kind = "work",
-  units = cardioUnits(""),
+  units = exerciseUnits({ id: "", name: "", group: "", sets: 0, reps: "", restSec: 0, equipment: "", setup: "", how: "", mistakes: "", progress: "" }),
   fallbackLoad,
   onChange,
   onRemove,
@@ -75,7 +78,7 @@ function SetRow({
   previous?: LoggedSet;
   lastKg?: number | null;
   kind?: "work" | "warmup" | "extra";
-  units?: ReturnType<typeof cardioUnits>;
+  units?: ReturnType<typeof exerciseUnits>;
   fallbackLoad?: number;
   onChange: (set: LoggedSet) => void;
   onRemove?: () => void;
@@ -85,6 +88,7 @@ function SetRow({
     previous?.reps ??
     (units.only === "work" ? units.fallbackLoad : units.work === "min" ? 6 : 8);
   const durationOnly = units.only === "work";
+  const repsOnly = units.only === "reps";
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const confirmTimer = useRef<number | null>(null);
@@ -140,10 +144,10 @@ function SetRow({
         <div
           className={cn(
             "grid min-w-0 flex-1 gap-2",
-            durationOnly ? "grid-cols-1" : "grid-cols-2",
+            durationOnly || repsOnly ? "grid-cols-1" : "grid-cols-2",
           )}
         >
-          {durationOnly ? null : (
+          {durationOnly || repsOnly ? null : (
             <Stepper
               value={set.weight}
               unit={units.load}
@@ -235,7 +239,7 @@ function SetRow({
             cancelClear();
             onChange({
               ...set,
-              weight: set.weight ?? startWeight,
+              weight: set.weight ?? (repsOnly ? 0 : startWeight),
               reps: set.reps ?? startReps,
               done: !set.done,
             });
@@ -276,6 +280,7 @@ export function WorkoutSessionView() {
   const [askAfter, setAskAfter] = useState(false);
   const [justDone, setJustDone] = useState<string | null>(null);
   const [pendingExtras, setPendingExtras] = useState<PinnedExercise[]>([]);
+  const [previewSkipped, setPreviewSkipped] = useState<string[]>([]);
   const [dismissId, setDismissId] = useState<string | null>(null);
   const afterRef = useRef<HTMLDivElement>(null);
   const dismissTimer = useRef<number | null>(null);
@@ -291,6 +296,7 @@ export function WorkoutSessionView() {
   }
 
   const session = todaysSession(todaySession, today);
+  const beforeDone = session ? beforeCheckInDone(session) : false;
   const picked = pick ? dayById(pick) : undefined;
   const viewingSession =
     Boolean(session) && (!picked || picked.id === session?.dayId);
@@ -299,10 +305,36 @@ export function WorkoutSessionView() {
     : picked;
   const counts = session && viewingSession ? sessionSetCounts(session) : null;
 
+  useEffect(() => {
+    setPreviewSkipped([]);
+    setPendingExtras([]);
+  }, [day?.id]);
+
+  function dismissPreviewExercise(exerciseId: string) {
+    const isExtra = pendingExtras.some((item) => item.exerciseId === exerciseId);
+    if (isExtra) {
+      setPendingExtras((current) =>
+        current.filter((item) => item.exerciseId !== exerciseId),
+      );
+    } else {
+      setPreviewSkipped((current) => [...current, exerciseId]);
+    }
+    toast.message("Removed from preview");
+  }
+
   function startWorkout(id: string) {
     const nextDay = dayById(id);
     if (!nextDay) return;
-    const next = createSession(nextDay, today, pendingExtras);
+    const filteredDay =
+      previewSkipped.length > 0
+        ? {
+            ...nextDay,
+            exercises: nextDay.exercises.filter(
+              (exercise) => !previewSkipped.includes(exercise.id),
+            ),
+          }
+        : nextDay;
+    const next = createSession(filteredDay, today, pendingExtras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
       const ride = cardioKind(exercise.exerciseId);
@@ -403,11 +435,12 @@ export function WorkoutSessionView() {
             </p>
             <WorkoutExercisePreview
               exercises={[
-                ...day.exercises,
+                ...day.exercises.filter((exercise) => !previewSkipped.includes(exercise.id)),
                 ...pendingExtras.map((item) =>
                   resolveExercise(item.exerciseId, athlete, item.sets),
                 ),
               ]}
+              onDismissExercise={locked ? undefined : dismissPreviewExercise}
             />
             {locked ? null : (
               <AddExerciseButton
@@ -539,32 +572,41 @@ export function WorkoutSessionView() {
       </header>
 
       <Card>
-        <button
-          type="button"
-          onClick={() =>
-            setBeforeOpen((value) =>
-              !(value ?? !session.feelingBeforeSaved),
-            )
-          }
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-        >
-          <div>
-            <p className="text-base font-medium">Before you lift</p>
-            {!(beforeOpen ?? !session.feelingBeforeSaved) ? (
-              <p className="mt-0.5 text-xs capitalize text-muted-foreground">
-                {session.feelingBeforeSaved ? "Saved · " : ""}
-                {session.timeOfDay} · energy {session.feelingBefore.energy}/5
-              </p>
-            ) : null}
-          </div>
-          <ChevronDown
-            className={cn(
-              "size-4 shrink-0 text-muted-foreground transition-transform",
-              (beforeOpen ?? !session.feelingBeforeSaved) && "rotate-180",
-            )}
-          />
-        </button>
-        {(beforeOpen ?? !session.feelingBeforeSaved) ? (
+        <div className="flex items-start justify-between gap-2 px-4 py-3">
+          <button
+            type="button"
+            onClick={() =>
+              setBeforeOpen((value) => !(value ?? !beforeDone))
+            }
+            className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+          >
+            <div>
+              <p className="text-base font-medium">Before you lift</p>
+              {!(beforeOpen ?? !beforeDone) ? (
+                <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                  {session.feelingBeforeSkipped
+                    ? "Skipped"
+                    : session.feelingBeforeSaved
+                      ? `Saved · ${session.timeOfDay} · energy ${session.feelingBefore.energy}/5`
+                      : ""}
+                </p>
+              ) : null}
+            </div>
+            <ChevronDown
+              className={cn(
+                "size-4 shrink-0 text-muted-foreground transition-transform",
+                (beforeOpen ?? !beforeDone) && "rotate-180",
+              )}
+            />
+          </button>
+          {(beforeOpen ?? !beforeDone) ? (
+            <CloseButton
+              onClick={() => setBeforeOpen(false)}
+              label="Close check-in"
+            />
+          ) : null}
+        </div>
+        {(beforeOpen ?? !beforeDone) ? (
           <CardContent className="space-y-4 pt-0">
             <div className="grid grid-cols-4 gap-1.5">
               {TIMES.map((time) => (
@@ -638,12 +680,38 @@ export function WorkoutSessionView() {
             <Button
               className="h-11 w-full"
               onClick={() => {
-                patch({ ...session, feelingBeforeSaved: true }, true);
+                patch(
+                  {
+                    ...session,
+                    feelingBeforeSaved: true,
+                    feelingBeforeSkipped: false,
+                  },
+                  true,
+                );
                 setBeforeOpen(false);
                 toast.success("Check-in saved");
               }}
             >
               Save check-in
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-10 w-full text-muted-foreground"
+              onClick={() => {
+                patch(
+                  {
+                    ...session,
+                    feelingBeforeSkipped: true,
+                    feelingBeforeSaved: false,
+                  },
+                  true,
+                );
+                setBeforeOpen(false);
+                toast.message("Check-in skipped");
+              }}
+            >
+              Skip check-in
             </Button>
           </CardContent>
         ) : null}
@@ -678,15 +746,22 @@ export function WorkoutSessionView() {
         const workLogged = workingSets(logged.sets);
         const warmLogged = warmupSets(logged.sets);
         const extraCount = Math.max(0, workLogged.length - exercise.sets);
-        const units = cardioUnits(exercise.group);
+        const units = exerciseUnits(exercise);
+        const hints = resolveLoadHints(exercise);
         const ride = cardioKind(exercise.id, exercise.group);
         const rideLoad = ride ? lastCardioLoad(athlete, ride) ?? load : load;
-        const allowWarmup = units.only !== "work" && !ride;
-        const seedKg = load?.weight ?? prev[0]?.weight ?? exercise.defaultLoad ?? units.fallbackLoad;
+        const allowWarmup =
+          units.only !== "work" && units.only !== "reps" && !ride;
+        const seedKg =
+          load?.weight ??
+          prev[0]?.weight ??
+          exercise.defaultLoad ??
+          hints.defaultLoad ??
+          units.fallbackLoad;
         const warmupGuess = suggestedWarmup(
           seedKg,
           logged.sets,
-          units.loadStep,
+          hints.loadStep ?? units.loadStep,
         );
         const prevWarm = previousWarmupSets(athlete, session.dayId, exercise.id);
 
@@ -875,7 +950,7 @@ export function WorkoutSessionView() {
                       const guess = suggestedWarmup(
                         seedKg,
                         logged.sets,
-                        units.loadStep,
+                        units.loadStep ?? hints.loadStep,
                       );
                       const lastWarm = warmLogged[warmLogged.length - 1];
                       const remembered = prevWarm[warmLogged.length];
@@ -953,7 +1028,11 @@ export function WorkoutSessionView() {
                             lastKg={set.warmup ? null : load?.weight}
                             kind={kind}
                             units={units}
-                            fallbackLoad={exercise.defaultLoad ?? units.fallbackLoad}
+                            fallbackLoad={
+                              hints.defaultLoad ??
+                              exercise.defaultLoad ??
+                              units.fallbackLoad
+                            }
                             onRemove={
                               kind === "work"
                                 ? undefined

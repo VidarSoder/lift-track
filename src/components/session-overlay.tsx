@@ -19,6 +19,7 @@ import {
   saveTimer,
   type SessionTimerState,
 } from "@/lib/session-timer";
+import { CloseButton } from "@/components/close-button";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -179,6 +180,10 @@ function SessionOverlayInner() {
                   {label}
                 </p>
               </div>
+              <CloseButton
+                onClick={() => patch({ ...state, hidden: true })}
+                label="Hide timer"
+              />
             </div>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
