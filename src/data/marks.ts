@@ -152,6 +152,7 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "bulgarian-split-squat": { icon: ArrowDownLeft, tone: TONES.pine },
   "hip-thrust": { icon: Mountain, tone: TONES.sage },
   "leg-press": { icon: Square, tone: TONES.stone },
+  "hack-squat": { icon: ArrowDownWideNarrow, tone: TONES.moss },
   "leg-curl": { icon: Undo2, tone: TONES.fog },
   "calf-raise": { icon: ArrowUpDown, tone: TONES.slate },
   "knee-raise": { icon: PersonStanding, tone: TONES.ink },

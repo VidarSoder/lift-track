@@ -272,6 +272,17 @@ export const EXERCISE_TAGS: Record<string, string[]> = {
     "bulgariskt utfall",
     "bulgarisk",
   ],
+  "hack-squat": [
+    "hack squat",
+    "hacksquat",
+    "hack",
+    "maskinknäböj",
+    "maskinknaboj",
+    "sled squat",
+    "knäböj",
+    "knaboj",
+    "benpress liknande",
+  ],
   "hip-thrust": [
     "höftlyft",
     "hoftlyft",

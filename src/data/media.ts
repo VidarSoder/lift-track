@@ -28,6 +28,7 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "bulgarian-split-squat": { slug: "Split_Squat_with_Dumbbells", youtube: "2C-uNgKwPLE" },
   "hip-thrust": { slug: "Barbell_Hip_Thrust", youtube: "Zp26L8-lyQM" },
   "leg-press": { slug: "Leg_Press", youtube: "IZqNpxJ7L_A" },
+  "hack-squat": { slug: "Hack_Squat", youtube: "rYgNArlw86k" },
   "leg-curl": { slug: "Lying_Leg_Curls", youtube: "1Tq3QdYUuHs" },
   "calf-raise": { slug: "Standing_Calf_Raises", youtube: "gwLzQxJg7lI" },
   "knee-raise": { slug: "Hanging_Leg_Raise", youtube: "Pr1ieGZ5atk" },
