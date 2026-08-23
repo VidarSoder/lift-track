@@ -107,7 +107,7 @@ export function AddExerciseButton({
               setCustomOpen(false);
               setName(event.target.value);
             }}
-            placeholder="Search curls, laterals…"
+            placeholder="Sök curl, latsdrag, sidolyft…"
             className="h-11"
             autoFocus
           />

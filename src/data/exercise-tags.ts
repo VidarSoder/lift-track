@@ -1,0 +1,420 @@
+import type { Exercise } from "@/lib/types";
+
+const GROUP_TAGS: Record<string, string[]> = {
+  Chest: [
+    "bröst",
+    "brost",
+    "chest",
+    "pecs",
+    "pec",
+    "bröstmuskel",
+    "bröstet",
+    "push",
+  ],
+  Shoulders: [
+    "axlar",
+    "axel",
+    "delts",
+    "shoulders",
+    "axelpress",
+    "deltoideus",
+    "skuldror",
+  ],
+  Triceps: ["triceps", "triss", "tricepsen", "armbåge", "armar", "tris"],
+  Back: ["rygg", "back", "lats", "latissimus", "ryggen", "drag"],
+  Biceps: ["biceps", "bicep", "bis", "armar", "curl", "bicepsen"],
+  "Brachialis / forearms": [
+    "underarm",
+    "underarmar",
+    "brachialis",
+    "forearms",
+    "hammer",
+  ],
+  "Quads / glutes": ["ben", "quads", "rumpa", "glutes", "lår", "framlår"],
+  "Glutes / hamstrings": ["rumpa", "glutes", "hamstrings", "baklår", "sätes"],
+  Quads: ["quads", "framlår", "ben", "lår"],
+  Hamstrings: ["hamstrings", "baklår", "lår", "hamstring"],
+  Calves: ["vader", "calves", "vadpress", "vaderna"],
+  Core: ["mage", "core", "abs", "magmuskler", "magarna"],
+  "Side delts": ["sidolyft", "laterals", "axlar", "sidoaxlar", "side delts"],
+  "Rear delts / back": [
+    "bakre axlar",
+    "rear delts",
+    "rygg",
+    "rodd",
+    "bakre delts",
+  ],
+  Custom: ["custom", "eget", "egen", "egna"],
+};
+
+const EQUIPMENT_TAGS: Record<string, string[]> = {
+  barbell: ["skivstång", "skivstang", "stång", "stang", "barbell", "skivstången"],
+  dumbbell: ["hantel", "hantlar", "dumbbell", "dumbbells", "hanteln"],
+  cable: ["kabel", "cable", "wire", "kabelmaskin"],
+  machine: ["maskin", "machine", "apparat"],
+  bench: ["bänk", "bank", "bench"],
+  rope: ["rep", "rope", "repgrepp"],
+  ez: ["ez", "ez-stång", "ez-stang", "böjd stång"],
+};
+
+/** First tags are the Swedish names shown as chips and the ones people actually type. */
+export const EXERCISE_TAGS: Record<string, string[]> = {
+  "bench-press": [
+    "bänkpress",
+    "bänk",
+    "bankpress",
+    "benkpress",
+    "benchpress",
+    "bench",
+    "bröstpress",
+    "stångbänk",
+    "liggande press",
+    "skivstångspress",
+  ],
+  "machine-bench": [
+    "maskinbänk",
+    "maskinpress",
+    "chest press",
+    "bröstpress",
+    "sittande bröstpress",
+    "bröstmaskin",
+    "maskin bröst",
+    "pec press",
+  ],
+  "incline-db-press": [
+    "lutande bänk",
+    "lutande hantelpress",
+    "incline",
+    "hantelpress",
+    "inklina",
+    "övre bröst",
+    "ovre brost",
+    "snedbänk",
+    "snedbank",
+    "30 grader",
+  ],
+  "seated-db-press": [
+    "sittande axelpress",
+    "axelpress",
+    "hantelpress",
+    "military press",
+    "shoulder press",
+    "axlar",
+    "militärpress",
+    "militarpress",
+    "ohp",
+    "sittande press",
+    "hantel axelpress",
+  ],
+  "weighted-dip": [
+    "dips",
+    "barrdips",
+    "dippar",
+    "tricepsdips",
+    "viktade dips",
+    "dip",
+    "parallellbarr",
+  ],
+  "skull-crusher": [
+    "skullcrushers",
+    "skull crusher",
+    "fransk press",
+    "liggande tricepspress",
+    "ez-stång",
+    "skull",
+    "liggande fransk",
+    "franska",
+  ],
+  "rope-pushdown": [
+    "pushdown",
+    "tricepspress",
+    "kabelpress",
+    "rep",
+    "rope",
+    "nedpress",
+    "trisspress",
+    "repnedpress",
+    "pushdowns",
+  ],
+  "overhead-rope": [
+    "overhead",
+    "triceps över huvudet",
+    "kabel overhead",
+    "långa huvudet",
+    "french press",
+    "över huvudet",
+    "over huvudet",
+    "stående fransk",
+  ],
+  "pull-up": [
+    "chins",
+    "chin",
+    "chinups",
+    "chin-ups",
+    "pullups",
+    "pull-ups",
+    "övergrepp",
+    "overgrepp",
+    "lats",
+    "rygghäv",
+    "upphävningar",
+    "upphangningar",
+    "smala chins",
+  ],
+  "lat-pulldown": [
+    "latsdrag",
+    "latdrag",
+    "latpulldown",
+    "pulldown",
+    "lats",
+    "neddrag",
+    "bredgrepp",
+    "sittande latsdrag",
+    "latissimusdrag",
+    "latsdraget",
+  ],
+  "cable-row": [
+    "sittande rodd",
+    "kabelrodd",
+    "rodd",
+    "row",
+    "ryggrodd",
+    "seated row",
+    "sittande kabelrodd",
+    "low row",
+  ],
+  "barbell-curl": [
+    "bicepscurl",
+    "stångcurl",
+    "stangcurl",
+    "curl",
+    "ez-curl",
+    "skivstångscurl",
+    "skivstangscurl",
+    "stående curl",
+  ],
+  "incline-curl": [
+    "lutande curl",
+    "incline curl",
+    "hantelcurl",
+    "stretch curl",
+    "lutande biceps",
+  ],
+  "hammer-curl": [
+    "hammercurl",
+    "hammare",
+    "hammer",
+    "neutral curl",
+    "underarm",
+    "hammarcurl",
+    "neutralgreppscurl",
+  ],
+  "goblet-squat": [
+    "goblet",
+    "knäböj",
+    "knaboj",
+    "squat",
+    "bägarsquat",
+    "bagarsquat",
+    "hantelknäböj",
+    "hantelknaboj",
+    "bägarknäböj",
+  ],
+  "bulgarian-split-squat": [
+    "bulgariska",
+    "bulgarian",
+    "split squat",
+    "utfall",
+    "enbensböj",
+    "enbensboj",
+    "bulgariskt utfall",
+    "bulgarisk",
+  ],
+  "hip-thrust": [
+    "höftlyft",
+    "hoftlyft",
+    "hipthrust",
+    "hip thrust",
+    "rumpa",
+    "glute bridge",
+    "säteslyft",
+    "sateslyft",
+  ],
+  "leg-press": [
+    "benpress",
+    "legpress",
+    "leg press",
+    "ben",
+    "benpressen",
+  ],
+  "leg-curl": [
+    "lårcurl",
+    "larcurl",
+    "bencurl",
+    "leg curl",
+    "hamstrings",
+    "baklår",
+    "baklar",
+    "liggande curl",
+    "lårböj",
+  ],
+  "calf-raise": [
+    "vadpress",
+    "vader",
+    "calf",
+    "stående vadpress",
+    "staende vadpress",
+    "calf raise",
+    "tåhäv",
+    "tahav",
+  ],
+  "knee-raise": [
+    "knälyft",
+    "knalyft",
+    "benlyft",
+    "hängande knälyft",
+    "hangande knalyft",
+    "mage",
+    "abs",
+    "knee raise",
+  ],
+  "cg-bench": [
+    "smal bänk",
+    "smal bank",
+    "close grip",
+    "close-grip",
+    "tricepsbänk",
+    "tricepsbank",
+    "smalt grepp",
+    "smal grepp",
+  ],
+  "ez-curl-arms": [
+    "ez-curl",
+    "bicepscurl",
+    "stångcurl",
+    "stangcurl",
+    "curl",
+    "ez-stång",
+    "ez-stang",
+  ],
+  "oh-db-extension": [
+    "triceps över huvudet",
+    "overhead extension",
+    "hantel overhead",
+    "fransk press",
+    "hantel över huvudet",
+    "sittande fransk",
+  ],
+  "incline-curl-arms": [
+    "lutande curl",
+    "incline curl",
+    "hantelcurl",
+    "biceps",
+  ],
+  "pushdown-arms": [
+    "pushdown",
+    "tricepspress",
+    "kabelpress",
+    "nedpress",
+    "trisspress",
+  ],
+  "spider-curl": [
+    "spindelcurl",
+    "spider curl",
+    "preacher",
+    "biceps",
+    "spindel",
+    "preacher curl",
+  ],
+  "lateral-raise": [
+    "sidolyft",
+    "laterals",
+    "lateral raise",
+    "hantellyft",
+    "sidoaxlar",
+    "sidolyften",
+    "flyes",
+    "axellyft",
+  ],
+  "chest-supported-row": [
+    "bröststödd rodd",
+    "broststodd rodd",
+    "rodd",
+    "chest supported",
+    "lutande rodd",
+    "bakre axlar",
+    "bröststödd",
+    "incline row",
+  ],
+  "cable-curl-fri": [
+    "kabelcurl",
+    "cable curl",
+    "bicepscurl",
+    "kabel",
+    "kabelbiceps",
+  ],
+  "pushdown-fri": [
+    "pushdown",
+    "tricepspress",
+    "kabelpress",
+    "nedpress",
+    "trisspress",
+  ],
+};
+
+export function foldSearch(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/å/g, "a")
+    .replace(/ä/g, "a")
+    .replace(/ö/g, "o")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function equipmentTags(equipment: string) {
+  const folded = foldSearch(equipment);
+  return Object.entries(EQUIPMENT_TAGS).flatMap(([key, tags]) =>
+    folded.includes(key) ? tags : [],
+  );
+}
+
+export function tagsFor(exercise: Exercise) {
+  const extra = EXERCISE_TAGS[exercise.id] ?? [];
+  const group = GROUP_TAGS[exercise.group] ?? [exercise.group];
+  return [
+    ...new Set([
+      exercise.name,
+      exercise.group,
+      exercise.equipment,
+      ...extra,
+      ...group,
+      ...equipmentTags(exercise.equipment),
+    ]),
+  ];
+}
+
+export function displayTags(exercise: Exercise) {
+  const preferred = EXERCISE_TAGS[exercise.id] ?? [];
+  const nameFold = foldSearch(exercise.name);
+  return preferred
+    .filter((tag) => foldSearch(tag) !== nameFold)
+    .slice(0, 2);
+}
+
+export function matchesExerciseQuery(exercise: Exercise, query: string) {
+  const tokens = foldSearch(query).split(" ").filter(Boolean);
+  if (tokens.length === 0) return true;
+  const haystack = foldSearch(
+    [
+      exercise.id.replace(/-/g, " "),
+      exercise.name,
+      exercise.group,
+      exercise.equipment,
+      ...tagsFor(exercise),
+    ].join(" "),
+  );
+  return tokens.every((token) => haystack.includes(token));
+}

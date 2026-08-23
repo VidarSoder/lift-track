@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Search, X } from "lucide-react";
+import { matchesExerciseQuery } from "@/data/exercise-tags";
 import { exercisesByMuscle } from "@/data/program";
 import { formatDateISO } from "@/lib/dates";
+import { catalogExercises } from "@/lib/exercises";
 import { isOpenSession } from "@/lib/active-session";
 import { workoutCatalog } from "@/lib/suggest";
 import { ExerciseBook, ExerciseList } from "@/components/exercise-guide";
@@ -11,19 +14,29 @@ import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | string;
 
 export function WeekView() {
-  const { todaySession } = useTraining();
+  const { athlete, todaySession } = useTraining();
   const workouts = workoutCatalog().filter((workout) => workout.id !== "warmup");
   const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
   const groups = useMemo(() => exercisesByMuscle(), []);
   const selected = workouts.find((workout) => workout.id === filter);
   const active = isOpenSession(todaySession, formatDateISO())
     ? todaySession
     : undefined;
+  const searching = query.trim().length > 0;
+  const dayIds = selected
+    ? new Set(selected.exercises.map((exercise) => exercise.id))
+    : null;
+  const matches = catalogExercises(athlete).filter((exercise) => {
+    if (dayIds && !dayIds.has(exercise.id)) return false;
+    return matchesExerciseQuery(exercise, query);
+  });
 
   return (
     <div className="space-y-5 pb-4">
@@ -33,10 +46,36 @@ export function WeekView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Every lift</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Photo and last weight on the list. Tap a row for the GIF on this page,
-          then Back.
+          Search in Swedish or English. Tags on every lift — bänkpress,
+          latsdrag, knäböj, sidolyft. Photo and last weight stay on the row.
         </p>
       </header>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Sök bänkpress, latsdrag, knäböj…"
+          className="h-12 pr-11 pl-10"
+          type="search"
+          inputMode="search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label="Sök lyft"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground"
+            aria-label="Rensa sök"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
+      </div>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <FilterChip
@@ -95,8 +134,36 @@ export function WeekView() {
               Preview, then start
             </Link>
           )}
-          <ExerciseList exercises={selected.exercises} />
+          {searching ? (
+            matches.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {matches.length} lyft · {query.trim()}
+                </p>
+                <ExerciseList exercises={matches} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Inget matchar “{query.trim()}” i {selected.title.split("·")[0].trim()}.
+                Prova bröst, rodd, axelpress — eller byt till All lifts.
+              </p>
+            )
+          ) : (
+            <ExerciseList exercises={selected.exercises} />
+          )}
         </div>
+      ) : searching ? (
+        matches.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">{matches.length} lyft</p>
+            <ExerciseList exercises={matches} />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Inget matchar “{query.trim()}”. Prova bröst, rodd, axelpress eller
+            det svenska namnet.
+          </p>
+        )
       ) : (
         <ExerciseBook groups={groups} />
       )}

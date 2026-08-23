@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
+import { displayTags } from "@/data/exercise-tags";
 import type { Exercise, LastLoad } from "@/lib/types";
 import { mediaFor, photoUrl, youtubeThumb, youtubeWatch } from "@/data/media";
 import { lastLoad } from "@/lib/session";
@@ -135,6 +136,7 @@ export function ExerciseRow({
 }) {
   const media = mediaFor(exercise.id);
   const last = loadLabel(load ?? null);
+  const tags = displayTags(exercise);
 
   return (
     <article
@@ -158,6 +160,18 @@ export function ExerciseRow({
             {exercise.group} · {exercise.sets} × {exercise.reps}
             {last ? ` · ${last}` : ""}
           </p>
+          {tags.length > 0 ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
           {open ? "Close" : "GIF"}

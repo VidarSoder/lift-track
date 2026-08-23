@@ -1,3 +1,4 @@
+import { matchesExerciseQuery } from "@/data/exercise-tags";
 import { uniqueExercises } from "@/data/program";
 import type { AthleteDoc, CustomExercise, Exercise } from "@/lib/types";
 
@@ -30,10 +31,7 @@ export function searchExercises(athlete: AthleteDoc, query: string, exclude: str
   return catalogExercises(athlete).filter((exercise) => {
     if (blocked.has(exercise.id)) return false;
     if (!needle) return true;
-    return (
-      exercise.name.toLowerCase().includes(needle) ||
-      exercise.group.toLowerCase().includes(needle)
-    );
+    return matchesExerciseQuery(exercise, query);
   });
 }
 

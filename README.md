@@ -2,7 +2,7 @@
 
 Phone-first training log for Vidar. Today’s session, set-by-set weights, previous loads, how you felt, and progress.
 
-**Form** is the preview book: still photos and last-used kg on the list. Tap a row for the GIF on that page, then Back. A short YouTube link is there if you want it. After you log a lift once, that weight comes back the next time. The bottom bar sits in the page chrome so Chrome on a phone cannot leave it floating. An in-progress session has a Back to session strip above the nav.
+**Form** is the preview book: still photos and last-used kg on the list. Search at the top works in Swedish and English (`bänkpress`, `latsdrag`, `knäböj`, `sidolyft`). Each row shows Swedish tags so those names stay visible. Tap a row for the GIF on that page, then Back. A short YouTube link is there if you want it. After you log a lift once, that weight comes back the next time. The bottom bar sits in the page chrome so Chrome on a phone cannot leave it floating. An in-progress session has a Back to session strip above the nav.
 
 Bookmark `/go/huge-arms` on your phone, or type the passphrase once. After that an httpOnly cookie keeps the session. The passphrase, salt, and Firebase Admin key never ship to the browser.
 
