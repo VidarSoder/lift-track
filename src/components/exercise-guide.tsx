@@ -195,7 +195,7 @@ export function ExerciseRow({
               onClick={onToggle}
               className="text-xs font-medium text-primary"
             >
-              Back
+              Close
             </button>
           </div>
 
