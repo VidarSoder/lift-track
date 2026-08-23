@@ -1,4 +1,5 @@
 import { upsertBikeStats } from "@/lib/bike";
+import { mergeLiftLog } from "@/lib/lifts";
 import { ATHLETE_NAME } from "@/data/program";
 import { currentTimeOfDay, formatDateISO } from "@/lib/dates";
 import type {
@@ -70,6 +71,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     lastLoads: {},
     bodyWeight: [],
     bikeLog: [],
+    liftLog: [],
     customExercises: [],
     pinnedByDay: {},
     prs: {},
@@ -154,6 +156,7 @@ export function stripTodaysProgress(athlete: AthleteDoc, today: string) {
     lastLoads,
     lastByDay,
     bikeLog: (athlete.bikeLog ?? []).filter((item) => item.date !== today),
+    liftLog: (athlete.liftLog ?? []).filter((item) => item.date !== today),
     lastSessionStatus: "skipped" as const,
     updatedAt: new Date().toISOString(),
   } satisfies AthleteDoc;
@@ -181,23 +184,26 @@ export function cancelWorkout(
 }
 
 export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
-  const next = {
-    ...athlete,
-    lastSessionDate: session.date,
-    lastSessionStatus: session.status,
-    lastByDay: {
-      ...athlete.lastByDay,
-      [session.dayId]: {
-        date: session.date,
-        sets: lastSetsFromSession(session),
+  const remembered = mergeLiftLog(
+    {
+      ...athlete,
+      lastSessionDate: session.date,
+      lastSessionStatus: session.status,
+      lastByDay: {
+        ...athlete.lastByDay,
+        [session.dayId]: {
+          date: session.date,
+          sets: lastSetsFromSession(session),
+        },
       },
+      lastLoads: mergeLoads(athlete.lastLoads, session),
+      updatedAt: new Date().toISOString(),
     },
-    lastLoads: mergeLoads(athlete.lastLoads, session),
-    updatedAt: new Date().toISOString(),
-  } satisfies AthleteDoc;
+    session,
+  );
   return session.bikeStats
-    ? upsertBikeStats(next, { ...session.bikeStats, date: session.date })
-    : next;
+    ? upsertBikeStats(remembered, { ...session.bikeStats, date: session.date })
+    : remembered;
 }
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {
@@ -239,30 +245,33 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
           : 1
       : athlete.streak;
 
-  const next = {
-    ...athlete,
-    lastSessionDate: session.date,
-    lastSessionStatus: session.status,
-    lastByDay: {
-      ...athlete.lastByDay,
-      [session.dayId]: {
-        date: session.date,
-        sets: lastSetsFromSession(session),
+  const completed = mergeLiftLog(
+    {
+      ...athlete,
+      lastSessionDate: session.date,
+      lastSessionStatus: session.status,
+      lastByDay: {
+        ...athlete.lastByDay,
+        [session.dayId]: {
+          date: session.date,
+          sets: lastSetsFromSession(session),
+        },
       },
+      lastLoads: mergeLoads(athlete.lastLoads, session),
+      prs,
+      recent,
+      sessionsCompleted:
+        session.status === "completed" && !alreadyToday
+          ? athlete.sessionsCompleted + 1
+          : athlete.sessionsCompleted,
+      streak,
+      updatedAt: new Date().toISOString(),
     },
-    lastLoads: mergeLoads(athlete.lastLoads, session),
-    prs,
-    recent,
-    sessionsCompleted:
-      session.status === "completed" && !alreadyToday
-        ? athlete.sessionsCompleted + 1
-        : athlete.sessionsCompleted,
-    streak,
-    updatedAt: new Date().toISOString(),
-  } satisfies AthleteDoc;
+    session,
+  );
   return session.bikeStats
-    ? upsertBikeStats(next, { ...session.bikeStats, date: session.date })
-    : next;
+    ? upsertBikeStats(completed, { ...session.bikeStats, date: session.date })
+    : completed;
 }
 
 export function previousSets(athlete: AthleteDoc, dayId: DayKind, exerciseId: string) {

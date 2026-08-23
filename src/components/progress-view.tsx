@@ -1,13 +1,17 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DAYS } from "@/data/program";
+import { ChevronDown } from "lucide-react";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatNiceDate } from "@/lib/dates";
+import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
+import { resolveExercise } from "@/lib/exercises";
 import { latestWeight, weightDelta } from "@/lib/weight";
 import { useTraining } from "@/components/training-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 function Bar({ value, max }: { value: number; max: number }) {
   const width = max === 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
@@ -18,8 +22,31 @@ function Bar({ value, max }: { value: number; max: number }) {
   );
 }
 
+function Spark({ points }: { points: { weight: number }[] }) {
+  const values = points.map((point) => point.weight);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(0.1, max - min);
+  return (
+    <div className="flex h-10 items-end gap-0.5">
+      {values.map((value, index) => {
+        const height = 22 + ((value - min) / span) * 78;
+        return (
+          <div
+            key={`${value}-${index}`}
+            className="flex-1 rounded-t-sm bg-primary/70"
+            style={{ height: `${height}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function ProgressView() {
   const { athlete } = useTraining();
+  const [group, setGroup] = useState("all");
+  const [openId, setOpenId] = useState<string | null>(null);
   const body = latestWeight(athlete);
   const delta = weightDelta(athlete);
   const bikes = bikeLog(athlete);
@@ -30,13 +57,18 @@ export function ProgressView() {
     ...bikes.map((item) => item.km ?? item.minutes / 10),
   );
   const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
+  const lifts = useMemo(() => liftsByExercise(athlete), [athlete]);
+  const groups = useMemo(
+    () => ["all", ...new Set(lifts.map((item) => item.group))],
+    [lifts],
+  );
+  const visible = lifts.filter((item) => group === "all" || item.group === group);
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
-      const exercise = DAYS.flatMap((day) => day.exercises).find((item) => item.id === id);
-      return exercise ? { name: exercise.name, ...pr } : null;
+      const exercise = resolveExercise(id, athlete);
+      return { id, name: exercise.name, ...pr };
     })
-    .filter(Boolean)
-    .sort((a, b) => (b?.weight ?? 0) - (a?.weight ?? 0))
+    .sort((a, b) => b.weight - a.weight)
     .slice(0, 8);
 
   return (
@@ -47,9 +79,8 @@ export function ProgressView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Progress</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {athlete.sessionsCompleted} sessions saved · streak {athlete.streak} day
-          {athlete.streak === 1 ? "" : "s"}. Summaries live on one athlete
-          document so the app does not scan old workouts.
+          Every set you save keeps a history for that lift. Filter to what you
+          actually do and watch the load over time.
         </p>
       </header>
 
@@ -62,8 +93,8 @@ export function ProgressView() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-[11px] text-muted-foreground">Streak</p>
-            <p className="text-2xl font-semibold">{athlete.streak}</p>
+            <p className="text-[11px] text-muted-foreground">Lifts tracked</p>
+            <p className="text-2xl font-semibold">{lifts.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -73,6 +104,100 @@ export function ProgressView() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div>
+            <p className="text-xs text-muted-foreground">Lifts you have logged</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Last working set each day. Tap a row for the dates.
+            </p>
+          </div>
+          {lifts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Save a set on Push, Pull, or anywhere else. That lift shows up
+              here with a trend the next time you log it.
+            </p>
+          ) : (
+            <>
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                {groups.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setGroup(item)}
+                    className={cn(
+                      "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
+                      group === item
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground",
+                    )}
+                  >
+                    {item === "all" ? "All" : item}
+                  </button>
+                ))}
+              </div>
+              {visible.map((item) => {
+                const open = openId === item.exerciseId;
+                return (
+                  <div key={item.exerciseId} className="rounded-2xl bg-secondary/60 px-3 py-3">
+                    <button
+                      type="button"
+                      className="flex w-full items-start justify-between gap-3 text-left"
+                      onClick={() =>
+                        setOpenId(open ? null : item.exerciseId)
+                      }
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium leading-tight">{item.name}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {item.group} · {formatLiftPoint(item.last)}
+                          {item.delta != null
+                            ? ` · ${item.delta > 0 ? "+" : ""}${item.delta} ${item.unit}`
+                            : ""}
+                        </p>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {item.points.length >= 2 ? (
+                      <div className="mt-2">
+                        <Spark points={item.points.slice(-10)} />
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        Log it again to see the trend.
+                      </p>
+                    )}
+                    {open ? (
+                      <div className="mt-3 space-y-1.5">
+                        {[...item.points].reverse().map((point) => (
+                          <div
+                            key={`${point.date}-${point.weight}-${point.reps}`}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <p className="text-muted-foreground">
+                              {formatNiceDate(point.date)}
+                            </p>
+                            <p className="font-medium">
+                              {formatLiftPoint(point)}
+                              {point.sets > 1 ? ` · ${point.sets} sets` : ""}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="space-y-2 pt-5">
@@ -166,12 +291,11 @@ export function ProgressView() {
         <CardContent className="space-y-3">
           {athlete.recent.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Finish a session and the bar chart shows up here. No extra Firestore
-              reads.
+              Finish a session and the bar chart shows up here.
             </p>
           ) : (
             athlete.recent.map((item) => (
-              <div key={item.date} className="space-y-1">
+              <div key={`${item.date}-${item.dayId}`} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium">
                     {item.date} · {item.title.split("·")[0]}
@@ -200,40 +324,20 @@ export function ProgressView() {
         <CardContent className="space-y-2">
           {namedPrs.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              PRs appear after you log completed sets.
+              PRs appear after you finish a session with saved sets.
             </p>
           ) : (
-            namedPrs.map((pr) =>
-              pr ? (
-                <div key={pr.name} className="flex items-center justify-between text-sm">
-                  <span>{pr.name}</span>
-                  <span className="font-medium">
-                    {pr.weight} kg × {pr.reps}
-                  </span>
-                </div>
-              ) : null,
-            )
+            namedPrs.map((pr) => (
+              <div key={pr.id} className="flex items-center justify-between text-sm">
+                <span>{pr.name}</span>
+                <span className="font-medium">
+                  {pr.weight} kg × {pr.reps}
+                </span>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Phone bookmark</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-          <p>
-            Safari / Chrome: share this site → Add to Home Screen. After the
-            first unlock, an httpOnly cookie keeps you in. The passphrase never
-            ships in the JavaScript bundle.
-          </p>
-          <p>
-            Sync goes through the server. Firestore itself denies every client
-            read and write. Only today&apos;s session can be saved.
-          </p>
-        </CardContent>
-      </Card>
-
     </div>
   );
 }

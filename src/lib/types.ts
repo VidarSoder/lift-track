@@ -175,6 +175,15 @@ export type BikeStats = {
   rpm?: number;
 };
 
+export type LiftPoint = {
+  date: string;
+  exerciseId: string;
+  weight: number;
+  reps: number | null;
+  sets: number;
+  unit?: string;
+};
+
 export type AthleteDoc = {
   name: string;
   timezone: string;
@@ -185,6 +194,7 @@ export type AthleteDoc = {
   lastLoads?: Record<string, LastLoad>;
   bodyWeight?: BodyWeight[];
   bikeLog?: BikeStats[];
+  liftLog?: LiftPoint[];
   customExercises?: CustomExercise[];
   pinnedByDay?: Partial<Record<DayKind, PinnedExercise[]>>;
   prs: Record<string, PersonalRecord>;

@@ -11,6 +11,7 @@ import {
 import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { upsertBikeStats } from "@/lib/bike";
+import { mergeLiftLog } from "@/lib/lifts";
 import { createAthlete, mergeLoads } from "@/lib/session";
 import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
@@ -90,24 +91,19 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     ) => {
       setTodaySessionState(session);
       const base = options?.athlete ?? athlete;
+      const withLoads = mergeLiftLog(
+        {
+          ...base,
+          lastSessionDate: session.date,
+          lastSessionStatus: session.status,
+          lastLoads: mergeLoads(base.lastLoads, session),
+          updatedAt: session.updatedAt,
+        },
+        session,
+      );
       const nextAthlete = session.bikeStats
-        ? upsertBikeStats(
-            {
-              ...base,
-              lastSessionDate: session.date,
-              lastSessionStatus: session.status,
-              lastLoads: mergeLoads(base.lastLoads, session),
-              updatedAt: session.updatedAt,
-            },
-            { ...session.bikeStats, date: session.date },
-          )
-        : {
-            ...base,
-            lastSessionDate: session.date,
-            lastSessionStatus: session.status,
-            lastLoads: mergeLoads(base.lastLoads, session),
-            updatedAt: session.updatedAt,
-          };
+        ? upsertBikeStats(withLoads, { ...session.bikeStats, date: session.date })
+        : withLoads;
       setAthleteState(nextAthlete);
       const bundle = { athlete: nextAthlete, today: session };
       if (options?.immediate) void saveNow(bundle);
