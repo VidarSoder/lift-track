@@ -1,3 +1,4 @@
+import { resolveLoadHints } from "@/data/load-hints";
 import type { Exercise, WarmupKind, WarmupPreset } from "@/lib/types";
 
 const LEGACY_BIKE_IDS = new Set([
@@ -217,6 +218,15 @@ export function exerciseUnits(exercise: Exercise): CardioUnits {
   const base = cardioUnits(exercise.group);
   if (exercise.bodyweight) {
     return { ...base, only: "reps", fallbackLoad: 0 };
+  }
+  // Strength lifts: use per-exercise plate/DB/machine steps, not the generic 2.5 kg default.
+  if (base.load === "kg") {
+    const hints = resolveLoadHints(exercise);
+    return {
+      ...base,
+      loadStep: hints.loadStep,
+      fallbackLoad: hints.defaultLoad,
+    };
   }
   return base;
 }
