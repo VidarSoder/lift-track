@@ -133,7 +133,8 @@ export function ProgressView() {
                   Reopen session
                 </Button>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Ended too soon? Reopen within 24 hours.
+                  Want to keep going? Reopen within 24 hours — Home and Workout
+                  stay free for a new session.
                 </p>
               </div>
             ) : null}

@@ -12,6 +12,7 @@ import { formatDateISO, suggestedWindow } from "@/lib/dates";
 import { workoutCatalog } from "@/lib/suggest";
 import {
   blankSets,
+  canReopenSession,
   createSession,
   emptyAfter,
   insertWarmupSet,
@@ -295,7 +296,16 @@ export function WorkoutSessionView() {
     }, 2400);
   }
 
-  const session = todaysSession(todaySession, today);
+  // Only an in-progress session owns /workout. Finished sessions stay on Progress
+  // (Reopen) so Home/Workout can start something new the same day.
+  const open = isOpenSession(todaySession, today);
+  const session = open ? todaysSession(todaySession, today) : undefined;
+  const finishedToday =
+    todaySession?.status === "completed" &&
+    todaySession.date === today &&
+    canReopenSession(todaySession)
+      ? todaySession
+      : undefined;
   const beforeDone = session ? beforeCheckInDone(session) : false;
   const picked = pick ? dayById(pick) : undefined;
   const viewingSession =
@@ -503,6 +513,23 @@ export function WorkoutSessionView() {
             Preview first. You can leave and come back after you start.
           </p>
         </header>
+        {finishedToday ? (
+          <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-border bg-card px-4 py-3 text-left">
+            <p className="text-sm font-medium">
+              Finished {finishedToday.title.split("·")[0].trim()} today
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Pick another workout below, or reopen the finished one from
+              Progress.
+            </p>
+            <Link
+              href="/progress"
+              className="mt-2 inline-block text-sm font-medium text-primary underline"
+            >
+              Open Progress to reopen
+            </Link>
+          </div>
+        ) : null}
         <div className="mt-8 space-y-2">
           {workoutCatalog().map((workout) => (
             <Link

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
 import { isOpenSession } from "@/lib/active-session";
-import { sessionSetCounts } from "@/lib/session";
+import { canReopenSession, sessionSetCounts } from "@/lib/session";
 import { lastDone, suggestWorkout, workoutCatalog } from "@/lib/suggest";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
@@ -17,6 +17,11 @@ export function TodayView() {
   const suggestion = suggestWorkout(athlete);
   const counts = todaySession ? sessionSetCounts(todaySession) : null;
   const open = isOpenSession(todaySession, today);
+  const finishedToday =
+    !open &&
+    todaySession?.status === "completed" &&
+    todaySession.date === today &&
+    canReopenSession(todaySession);
 
   return (
     <div className="space-y-5 pb-4">
@@ -70,6 +75,16 @@ export function TodayView() {
             >
               Start training
             </Link>
+            {finishedToday && todaySession ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                Already finished {todaySession.title.split("·")[0].trim()} today.
+                Start something new above, or{" "}
+                <Link href="/progress" className="font-medium text-primary underline">
+                  reopen it on Progress
+                </Link>
+                .
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       )}
