@@ -2,8 +2,8 @@ import { cardioUnits, warmupById } from "@/data/warmup";
 import { resolveExercise } from "@/lib/exercises";
 import type { AthleteDoc, LiftPoint, LoggedSet, WorkoutSession } from "@/lib/types";
 
-const MAX_TOTAL = 240;
-const MAX_PER_LIFT = 16;
+const MAX_TOTAL = 320;
+const MAX_PER_LIFT = 20;
 
 export function liftUnit(exerciseId: string, athlete: AthleteDoc) {
   const preset = warmupById(exerciseId);
@@ -28,8 +28,11 @@ function pointFromSets(
   date: string,
   exerciseId: string,
   sets: LoggedSet[],
+  kind: "work" | "warmup",
 ): LiftPoint | null {
-  const done = sets.filter((set) => set.done && !set.warmup);
+  const done = sets.filter((set) =>
+    set.done && (kind === "warmup" ? Boolean(set.warmup) : !set.warmup),
+  );
   if (done.length === 0) return null;
   const unit = liftUnit(exerciseId, athlete);
   const ranked = [...done].sort((a, b) => {
@@ -49,28 +52,49 @@ function pointFromSets(
     reps: unit === "min" ? null : best.reps,
     sets: done.length,
     unit,
+    kind,
   };
 }
 
 export function mergeLiftLog(athlete: AthleteDoc, session: WorkoutSession): AthleteDoc {
-  const incoming = session.exercises
-    .map((exercise) =>
-      pointFromSets(athlete, session.date, exercise.exerciseId, exercise.sets),
-    )
-    .filter((point): point is LiftPoint => point != null);
+  const incoming = session.exercises.flatMap((exercise) => {
+    const work = pointFromSets(
+      athlete,
+      session.date,
+      exercise.exerciseId,
+      exercise.sets,
+      "work",
+    );
+    const warmup = pointFromSets(
+      athlete,
+      session.date,
+      exercise.exerciseId,
+      exercise.sets,
+      "warmup",
+    );
+    return [work, warmup].filter((point): point is LiftPoint => point != null);
+  });
   if (incoming.length === 0) return athlete;
 
   const kept = liftLog(athlete).filter(
     (point) =>
       !(
         point.date === session.date &&
-        incoming.some((item) => item.exerciseId === point.exerciseId)
+        incoming.some(
+          (item) =>
+            item.exerciseId === point.exerciseId &&
+            (item.kind ?? "work") === (point.kind ?? "work"),
+        )
       ),
   );
   const next = [...incoming, ...kept]
     .sort((a, b) => b.date.localeCompare(a.date))
     .reduce<LiftPoint[]>((list, point) => {
-      const count = list.filter((item) => item.exerciseId === point.exerciseId).length;
+      const count = list.filter(
+        (item) =>
+          item.exerciseId === point.exerciseId &&
+          (item.kind ?? "work") === (point.kind ?? "work"),
+      ).length;
       if (count >= MAX_PER_LIFT) return list;
       list.push(point);
       return list;
@@ -97,14 +121,16 @@ export function inferredLiftLog(athlete: AthleteDoc): LiftPoint[] {
       reps: load.reps,
       sets: 1,
       unit: liftUnit(exerciseId, athlete),
+      kind: "work",
     });
   }
   return points.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export function liftsByExercise(athlete: AthleteDoc) {
+function groupLiftPoints(athlete: AthleteDoc, kind: "work" | "warmup") {
   const groups = new Map<string, LiftPoint[]>();
   for (const point of inferredLiftLog(athlete)) {
+    if ((point.kind ?? "work") !== kind) continue;
     const bucket = groups.get(point.exerciseId) ?? [];
     bucket.push(point);
     groups.set(point.exerciseId, bucket);
@@ -120,6 +146,7 @@ export function liftsByExercise(athlete: AthleteDoc) {
         name: exercise.name,
         group: exercise.group,
         unit: last.unit ?? "kg",
+        kind,
         last,
         previous,
         delta: previous ? Number((last.weight - previous.weight).toFixed(1)) : null,
@@ -127,6 +154,14 @@ export function liftsByExercise(athlete: AthleteDoc) {
       };
     })
     .sort((a, b) => b.last.date.localeCompare(a.last.date) || a.name.localeCompare(b.name));
+}
+
+export function liftsByExercise(athlete: AthleteDoc) {
+  return groupLiftPoints(athlete, "work");
+}
+
+export function warmupsByExercise(athlete: AthleteDoc) {
+  return groupLiftPoints(athlete, "warmup");
 }
 
 export function formatLiftPoint(point: LiftPoint) {

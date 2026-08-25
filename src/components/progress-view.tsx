@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { CloseButton } from "@/components/close-button";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
-import { formatLiftPoint, liftsByExercise } from "@/lib/lifts";
+import { formatLiftPoint, liftsByExercise, warmupsByExercise } from "@/lib/lifts";
 import { resolveExercise } from "@/lib/exercises";
 import { canReopenSession } from "@/lib/session";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
@@ -64,6 +64,7 @@ export function ProgressView() {
   );
   const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
   const lifts = useMemo(() => liftsByExercise(athlete), [athlete]);
+  const warmups = useMemo(() => warmupsByExercise(athlete), [athlete]);
   const groups = useMemo(
     () => ["all", ...new Set(lifts.map((item) => item.group))],
     [lifts],
@@ -262,6 +263,46 @@ export function ProgressView() {
           )}
         </CardContent>
       </Card>
+
+      {warmups.length > 0 ? (
+        <Card>
+          <CardContent className="space-y-2.5 pt-5">
+            <div>
+              <p className="text-xs text-muted-foreground">Warm-up trends</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Lighter than working sets — top warm-up load each day.
+              </p>
+            </div>
+            {warmups
+              .filter((item) => group === "all" || item.group === group)
+              .map((item) => (
+                <div
+                  key={`wu-${item.exerciseId}`}
+                  className="rounded-xl bg-secondary/40 px-3 py-2"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-tight">
+                        {item.name}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {formatLiftPoint(item.last)}
+                        {item.delta != null
+                          ? ` · ${item.delta > 0 ? "+" : ""}${item.delta} ${item.unit}`
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                  {item.points.length >= 2 ? (
+                    <div className="mt-1.5 opacity-70">
+                      <Spark points={item.points.slice(-8)} />
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardContent className="space-y-3 pt-5">

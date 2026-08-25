@@ -62,18 +62,21 @@ export function suggestedWarmup(
   if (workKg === 0) {
     return { weight: 0, reps: warm.length === 0 ? 5 : 3 };
   }
+  const fine = Math.min(0.5, step > 0 ? step : 0.5);
   const target = workKg != null && workKg > 0 ? workKg : 20;
   const last = [...warm].reverse().find((set) => set.weight != null)?.weight;
-  const fractions = [0.5, 0.7, 0.85];
-  const nextFraction = fractions[Math.min(warm.length, fractions.length - 1)];
+  // Stay under the working weight; prefer half-kilo precision so gym DBs land cleanly.
+  const fractions = [0.55, 0.7, 0.85];
+  const nextFraction = fractions[Math.min(warm.length, fractions.length - 1)] ?? 0.85;
   let weight =
     last != null
-      ? Math.max(last + step, target * nextFraction)
-      : target * (fractions[0] ?? 0.5);
-  const ceiling = workKg != null && workKg > step ? workKg - step : weight;
-  weight = Math.max(step, Math.min(weight, ceiling));
+      ? Math.min(last + fine, target * nextFraction)
+      : target * (fractions[0] ?? 0.55);
+  const ceiling =
+    workKg != null && workKg > fine ? workKg - fine : weight;
+  weight = Math.max(fine, Math.min(weight, ceiling));
   return {
-    weight: roundToStep(weight, step),
+    weight: roundToStep(weight, fine),
     reps: warm.length === 0 ? 8 : 5,
   };
 }

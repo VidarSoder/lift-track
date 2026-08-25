@@ -347,6 +347,7 @@ export function WorkoutSessionView() {
     const next = createSession(filteredDay, today, pendingExtras);
     for (const exercise of next.exercises) {
       const prev = previousSets(athlete, nextDay.id, exercise.exerciseId);
+      const prevWarm = previousWarmupSets(athlete, nextDay.id, exercise.exerciseId);
       const ride = cardioKind(exercise.exerciseId);
       const fallback = ride
         ? lastCardioLoad(athlete, ride) ?? lastLoad(athlete, exercise.exerciseId)
@@ -361,11 +362,19 @@ export function WorkoutSessionView() {
         }));
         continue;
       }
-      exercise.sets = exercise.sets.map((set, index) => ({
+      const work = exercise.sets.map((set, index) => ({
         ...set,
         weight: prev[index]?.weight ?? fallback?.weight ?? null,
         reps: prev[index]?.reps ?? fallback?.reps ?? null,
       }));
+      // Carry last session's warm-up slots forward (same loads you actually used).
+      const warm = prevWarm.map((set) => ({
+        weight: set.weight,
+        reps: set.reps,
+        done: false,
+        warmup: true as const,
+      }));
+      exercise.sets = [...warm, ...work];
     }
     persistSession(next);
   }
@@ -974,26 +983,27 @@ export function WorkoutSessionView() {
                         toast.message("That's enough warm-up sets for this lift.");
                         return;
                       }
+                      const lastWarm = warmLogged[warmLogged.length - 1];
+                      const remembered = prevWarm[warmLogged.length];
                       const guess = suggestedWarmup(
                         seedKg,
                         logged.sets,
-                        units.loadStep ?? hints.loadStep,
+                        Math.min(0.5, units.loadStep ?? hints.loadStep),
                       );
-                      const lastWarm = warmLogged[warmLogged.length - 1];
-                      const remembered = prevWarm[warmLogged.length];
+                      // Prefer what you logged last time for this warm-up slot.
+                      const weight =
+                        remembered?.weight ??
+                        lastWarm?.weight ??
+                        guess.weight;
+                      const reps =
+                        remembered?.reps ?? lastWarm?.reps ?? guess.reps;
                       const exercises = session.exercises.map((item) =>
                         item.exerciseId === exercise.id
                           ? {
                               ...item,
                               sets: insertWarmupSet(item.sets, {
-                                weight:
-                                  remembered?.weight ??
-                                  lastWarm?.weight ??
-                                  guess.weight,
-                                reps:
-                                  remembered?.reps ??
-                                  lastWarm?.reps ??
-                                  guess.reps,
+                                weight,
+                                reps,
                                 done: false,
                                 warmup: true,
                               }),

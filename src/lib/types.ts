@@ -190,6 +190,8 @@ export type LiftPoint = {
   reps: number | null;
   sets: number;
   unit?: string;
+  /** Working sets by default; warm-up trends use kind "warmup". */
+  kind?: "work" | "warmup";
 };
 
 export type AthleteDoc = {

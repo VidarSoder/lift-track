@@ -13,6 +13,12 @@ rules_version = '2';
 // Fields: date, dayId, title, status, startedAt, finishedAt,
 //   timeOfDay, feelingBefore, feelingAfter, exercises, updatedAt
 //
+// Collection: athletes/{id}/setLogs
+// Document ID: date__dayId__exerciseId__kind__setIndex__sessionStartedAt
+// Fields: date, dayId, title, exerciseId, kind (work|warmup|extra),
+//   setIndex, weight, reps, done, sessionStatus, sessionStartedAt, loggedAt
+// Append-only durable history. Same key may be merged while editing; never deleted.
+//
 // Client SDK access is denied. All reads/writes go through this
 // website's Next.js API (origin-locked) using the Admin SDK after
 // a passphrase cookie check. Writes are limited to the single

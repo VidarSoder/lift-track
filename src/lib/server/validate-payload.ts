@@ -51,7 +51,8 @@ function isLiftPoint(value: unknown) {
     value.exerciseId.length <= 80 &&
     isFiniteNumber(value.weight, 0, WEIGHT_MAX) &&
     (value.reps == null || isFiniteNumber(value.reps, 0, 500)) &&
-    isFiniteNumber(value.sets, 1, 50)
+    isFiniteNumber(value.sets, 1, 50) &&
+    (value.kind == null || value.kind === "work" || value.kind === "warmup")
   );
 }
 
@@ -97,7 +98,7 @@ export function isAthletePayload(value: unknown): value is AthleteDoc {
     (data.bikeLog == null ||
       (Array.isArray(data.bikeLog) && data.bikeLog.length <= 80 && data.bikeLog.every(isBikeEntry))) &&
     (data.liftLog == null ||
-      (Array.isArray(data.liftLog) && data.liftLog.length <= 240 && data.liftLog.every(isLiftPoint))) &&
+      (Array.isArray(data.liftLog) && data.liftLog.length <= 320 && data.liftLog.every(isLiftPoint))) &&
     (data.customExercises == null ||
       (Array.isArray(data.customExercises) && data.customExercises.length <= 80))
   );

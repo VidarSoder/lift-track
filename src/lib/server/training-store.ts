@@ -1,5 +1,6 @@
 import { formatDateISO } from "@/lib/dates";
 import { createAthlete, isLiveSession } from "@/lib/session";
+import { setLogDocId, setLogEntriesFromSession } from "@/lib/set-logs";
 import { athleteId } from "@/lib/server/secrets";
 import { adminDb } from "@/lib/server/firebase-admin";
 import { isAthletePayload, isSessionPayload } from "@/lib/server/validate-payload";
@@ -56,6 +57,11 @@ export async function saveTrainingState(bundle: CacheBundle) {
     batch.set(athleteRef.collection("sessions").doc(bundle.today.date), bundle.today, {
       merge: true,
     });
+    // Append-only durable log: same set key can be updated, never deleted.
+    for (const entry of setLogEntriesFromSession(bundle.today)) {
+      const ref = athleteRef.collection("setLogs").doc(setLogDocId(entry));
+      batch.set(ref, entry, { merge: true });
+    }
   }
   await batch.commit();
   return bundle;
