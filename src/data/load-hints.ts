@@ -6,16 +6,16 @@ export type LoadHints = {
 };
 
 /**
- * Starting load and +/- step per lift.
- * Steps match common gym increments: DBs ~2 kg, pin stacks ~5 kg,
- * barbell plates ~2.5 kg (1.25 kg per side).
+ * Starting load and +/- button step per lift.
+ * Typing always allows 0.5 kg (see Stepper). Buttons jump by real gym amounts:
+ * DBs often 1 kg, pin stacks 5 kg, barbell plates 2.5 kg.
  */
 const BY_ID: Record<string, LoadHints> = {
   "bench-press": { defaultLoad: 35, loadStep: 2.5 },
   "machine-bench": { defaultLoad: 20, loadStep: 5 },
-  "incline-db-press": { defaultLoad: 6, loadStep: 2 },
+  "incline-db-press": { defaultLoad: 6, loadStep: 1 },
   "pec-deck": { defaultLoad: 12, loadStep: 5 },
-  "seated-db-press": { defaultLoad: 6, loadStep: 2 },
+  "seated-db-press": { defaultLoad: 6, loadStep: 1 },
   "weighted-dip": { defaultLoad: 0, loadStep: 2.5 },
   "skull-crusher": { defaultLoad: 12, loadStep: 2.5 },
   "rope-pushdown": { defaultLoad: 10, loadStep: 5 },
@@ -24,9 +24,9 @@ const BY_ID: Record<string, LoadHints> = {
   "lat-pulldown": { defaultLoad: 25, loadStep: 5 },
   "cable-row": { defaultLoad: 20, loadStep: 5 },
   "barbell-curl": { defaultLoad: 12, loadStep: 2.5 },
-  "db-curl": { defaultLoad: 6, loadStep: 2 },
-  "incline-curl": { defaultLoad: 4, loadStep: 2 },
-  "hammer-curl": { defaultLoad: 6, loadStep: 2 },
+  "db-curl": { defaultLoad: 6, loadStep: 1 },
+  "incline-curl": { defaultLoad: 4, loadStep: 1 },
+  "hammer-curl": { defaultLoad: 6, loadStep: 1 },
   "leg-press": { defaultLoad: 40, loadStep: 10 },
   "hack-squat": { defaultLoad: 20, loadStep: 5 },
   "hip-thrust": { defaultLoad: 35, loadStep: 5 },
@@ -34,19 +34,19 @@ const BY_ID: Record<string, LoadHints> = {
   "calf-raise": { defaultLoad: 20, loadStep: 5 },
   "cg-bench": { defaultLoad: 30, loadStep: 2.5 },
   "ez-curl-arms": { defaultLoad: 12, loadStep: 2.5 },
-  "oh-db-extension": { defaultLoad: 6, loadStep: 2 },
-  "incline-curl-arms": { defaultLoad: 4, loadStep: 2 },
+  "oh-db-extension": { defaultLoad: 6, loadStep: 1 },
+  "incline-curl-arms": { defaultLoad: 4, loadStep: 1 },
   "pushdown-arms": { defaultLoad: 10, loadStep: 5 },
-  "spider-curl": { defaultLoad: 8, loadStep: 2 },
+  "spider-curl": { defaultLoad: 8, loadStep: 1 },
   "lateral-raise": { defaultLoad: 4, loadStep: 1 },
-  "chest-supported-row": { defaultLoad: 8, loadStep: 2 },
+  "chest-supported-row": { defaultLoad: 8, loadStep: 1 },
   "cable-curl-fri": { defaultLoad: 10, loadStep: 5 },
   "pushdown-fri": { defaultLoad: 10, loadStep: 5 },
 };
 
 export function inferLoadStep(equipment: string) {
   const text = equipment.toLowerCase();
-  if (/dumbbell|hantel|db\b/i.test(text)) return 2;
+  if (/dumbbell|hantel|db\b/i.test(text)) return 1;
   if (
     /machine|leg press|hack squat|pec deck|pulldown|leg curl|calf|press machine|cable/i.test(
       text,

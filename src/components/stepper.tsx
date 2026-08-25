@@ -10,11 +10,31 @@ function parseLooseNumber(raw: string) {
   return Number.isFinite(value) ? value : null;
 }
 
-function snap(value: number, step: number, min: number, max: number) {
+/** Finest precision when typing / dragging — gym weights are usually 0.5 kg. */
+function fineStepFor(unit: string) {
+  if (unit === "kg") return 0.5;
+  if (unit === "km/h") return 0.5;
+  if (unit === "min" || unit === "reps" || unit === "lvl" || unit === "rpe") {
+    return 1;
+  }
+  return 0.5;
+}
+
+function decimalsFor(step: number) {
+  if (step < 1) return 1;
+  if (Number.isInteger(step)) return 0;
+  return 1;
+}
+
+function clampSnap(
+  value: number,
+  step: number,
+  min: number,
+  max: number,
+) {
   const snapped = Math.round(value / step) * step;
   const clamped = Math.min(max, Math.max(min, snapped));
-  const decimals = step < 1 ? 1 : Number.isInteger(step) ? 0 : 1;
-  return Number(clamped.toFixed(decimals));
+  return Number(clamped.toFixed(decimalsFor(step)));
 }
 
 function rangeFor(unit: string) {
@@ -47,6 +67,7 @@ export function Stepper({
   const bounds = rangeFor(unit);
   const low = min ?? bounds.min;
   const high = max ?? bounds.max;
+  const fine = fineStepFor(unit);
   const current = value ?? fallback;
   const [editing, setEditing] = useState(false);
   const [typed, setTyped] = useState("");
@@ -56,10 +77,18 @@ export function Stepper({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  function commit(next: number) {
-    const snapped = snap(next, step, low, high);
-    onChange(snapped);
-    if (editing) setTyped(String(snapped).replace(".", ","));
+  /** +/- buttons: jump by the equipment step, keep 0.5 kg precision. */
+  function bump(delta: number) {
+    onChange(clampSnap(current + delta, fine, low, high));
+  }
+
+  /** Typed / slider: accept any value at fine precision (0.5 kg), not the button step. */
+  function commitFree(next: number) {
+    onChange(clampSnap(next, fine, low, high));
+  }
+
+  function formatDisplay(n: number) {
+    return String(n).replace(".", ",");
   }
 
   return (
@@ -69,7 +98,7 @@ export function Stepper({
           type="button"
           className="grid size-9 shrink-0 place-items-center"
           aria-label={`Decrease ${unit}`}
-          onClick={() => commit(current - step)}
+          onClick={() => bump(-step)}
         >
           <Minus className="size-4" />
         </button>
@@ -84,7 +113,7 @@ export function Stepper({
               onChange={(event) => setTyped(event.target.value)}
               onBlur={() => {
                 const parsed = parseLooseNumber(typed);
-                if (parsed != null) commit(parsed);
+                if (parsed != null) commitFree(parsed);
                 setEditing(false);
               }}
               onKeyDown={(event) => {
@@ -94,8 +123,7 @@ export function Stepper({
               className="w-full bg-transparent text-center text-sm font-semibold tabular-nums outline-none"
             />
             <span className="block text-[10px] font-normal text-muted-foreground">
-              {unit}
-              {!editing ? ` · tap to type · ±${step}` : ""}
+              {unit} · any value
             </span>
           </div>
         ) : (
@@ -103,7 +131,7 @@ export function Stepper({
             type="button"
             className="min-w-0 flex-1 px-1 text-center"
             onClick={() => {
-              setTyped(value == null ? "" : String(value).replace(".", ","));
+              setTyped(value == null ? "" : formatDisplay(value));
               setEditing(true);
             }}
           >
@@ -111,8 +139,7 @@ export function Stepper({
               {value ?? "—"}
             </span>
             <span className="block text-[10px] font-normal text-muted-foreground">
-              {unit}
-              {!editing ? ` · tap to type · ±${step}` : ""}
+              {unit} · tap to type · ±{step}
             </span>
           </button>
         )}
@@ -120,7 +147,7 @@ export function Stepper({
           type="button"
           className="grid size-9 shrink-0 place-items-center"
           aria-label={`Increase ${unit}`}
-          onClick={() => commit(current + step)}
+          onClick={() => bump(step)}
         >
           <Plus className="size-4" />
         </button>
@@ -129,13 +156,13 @@ export function Stepper({
         className={cn("mt-1.5 px-1")}
         min={low}
         max={high}
-        step={step}
+        step={fine}
         value={[Math.min(high, Math.max(low, current))]}
         onValueChange={(next) => {
           const raw = Array.isArray(next) ? next[0] : next;
           if (typeof raw !== "number") return;
           setEditing(false);
-          commit(raw);
+          commitFree(raw);
         }}
         aria-label={`${unit} slider`}
       />
