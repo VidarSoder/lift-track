@@ -441,7 +441,9 @@ export function WorkoutSessionView() {
               <div className="flex items-center gap-3">
                 <ExerciseMark id={day.id} />
                 <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-                  {day.exercises.length} lifts · preview
+                  {day.id === "stretch"
+                    ? `${day.exercises.length} stretches · preview`
+                    : `${day.exercises.length} lifts · preview`}
                 </p>
               </div>
               <h1 className="mt-2 font-heading text-3xl leading-none">{day.title}</h1>
@@ -450,7 +452,9 @@ export function WorkoutSessionView() {
             <p className="text-sm leading-6 text-muted-foreground">
               {day.id === "warmup"
                 ? "This is its own session. Walk, run, or bike. Add extras if you want, then start a lift later the same day."
-                : "Still photos and last kg on the list. Tap a row for the GIF on this page, then Back."}
+                : day.id === "stretch"
+                  ? "Its own session — hold each stretch, mark it done. Skip any you don’t need. Lift later the same day if you want."
+                  : "Still photos and last kg on the list. Tap a row for the GIF on this page, then Back."}
             </p>
             <WorkoutExercisePreview
               exercises={[
@@ -550,7 +554,9 @@ export function WorkoutSessionView() {
               <div>
                 <p className="font-medium">{workout.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {workout.exercises.length} lifts · {workout.durationMin} min
+                  {workout.id === "stretch"
+                    ? `${workout.exercises.length} stretches · ${workout.durationMin} min`
+                    : `${workout.exercises.length} lifts · ${workout.durationMin} min`}
                 </p>
               </div>
             </Link>

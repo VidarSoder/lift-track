@@ -353,7 +353,7 @@ export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {
   const prs: Record<string, PersonalRecord> = { ...athlete.prs };
-  if (session.dayId !== "warmup") {
+  if (session.dayId !== "warmup" && session.dayId !== "stretch") {
     for (const exercise of session.exercises) {
       for (const set of workingSets(exercise.sets)) {
         if (!set.done || !set.weight || !set.reps) continue;

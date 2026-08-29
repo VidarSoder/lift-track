@@ -80,6 +80,22 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "bike-easy-8": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
   "bike-ramp-10": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
   "bike-hard-then-easy": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
+  "cat-cow": { slug: "Cat_Stretch", youtube: "y39PrKY_4JM" },
+  "neck-side-stretch": { slug: "Side_Neck_Stretch", youtube: "SedzswEwpPw" },
+  "cross-body-shoulder-stretch": {
+    slug: "Shoulder_Stretch",
+    youtube: "6jHsraw2NIk",
+  },
+  "overhead-tricep-stretch": {
+    slug: "Triceps_Stretch",
+    youtube: "6jHsraw2NIk",
+  },
+  "childs-pose": { slug: "Childs_Pose", youtube: "RSoK_QxeRlE" },
+  "knee-to-chest": { slug: "Hug_Knees_To_Chest", youtube: "o8gAyDUh2bs" },
+  "behind-back-biceps-stretch": {
+    slug: "Standing_Biceps_Stretch",
+    youtube: "w9cj-dovK3o",
+  },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {

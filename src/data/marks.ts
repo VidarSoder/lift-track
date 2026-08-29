@@ -168,6 +168,13 @@ export const EXERCISE_MARKS: Record<string, Mark> = {
   "pushdown-fri": { icon: Crosshair, tone: TONES.dusk },
   "zone2-walk": { icon: Route, tone: TONES.moss },
   "arm-care": { icon: HeartPulse, tone: TONES.clay },
+  "cat-cow": { icon: RefreshCcw, tone: TONES.sage },
+  "neck-side-stretch": { icon: PersonStanding, tone: TONES.sand },
+  "cross-body-shoulder-stretch": { icon: MoveHorizontal, tone: TONES.copper },
+  "overhead-tricep-stretch": { icon: ArrowUpFromDot, tone: TONES.dusk },
+  "childs-pose": { icon: Leaf, tone: TONES.moss },
+  "knee-to-chest": { icon: Undo2, tone: TONES.pine },
+  "behind-back-biceps-stretch": { icon: RefreshCcw, tone: TONES.blush },
   "walk-easy-10": { icon: Route, tone: TONES.sage },
   "walk-easy-30": { icon: Route, tone: TONES.moss },
   "walk-easy": { icon: Route, tone: TONES.moss },
@@ -190,6 +197,7 @@ export const WORKOUT_MARKS: Record<string, Mark> = {
   shoulders: { icon: Sun, tone: TONES.sand },
   optional: { icon: Leaf, tone: TONES.pine },
   warmup: { icon: Bike, tone: TONES.sage },
+  stretch: { icon: Waves, tone: TONES.fog },
   rest: { icon: Snowflake, tone: TONES.stone },
 };
 

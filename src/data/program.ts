@@ -1,5 +1,8 @@
+import { stretchExercises } from "@/data/stretches";
 import { WARMUP_PRESETS, warmupLabel } from "@/data/warmup";
 import type { Exercise, ProgramDay, Weekday } from "@/lib/types";
+
+const STRETCH_DAY_EXERCISES = stretchExercises();
 
 export const ATHLETE_NAME = "Vidar";
 export const PROGRAM_NAME = "Start training";
@@ -650,6 +653,19 @@ export const DAYS: ProgramDay[] = [
     })),
   },
   {
+    id: "stretch",
+    weekday: "saturday",
+    title: "Stretch · mobility",
+    source: "Any day",
+    focus:
+      "Hold-based stretches by area — neck through hips. Do the full list, or skip what you don’t need.",
+    durationMin: "10–20",
+    warmup: [],
+    coaching:
+      "Its own session, like Warm-up. Run through once a day or whenever you want, then lift later the same day if you like.",
+    exercises: STRETCH_DAY_EXERCISES,
+  },
+  {
     id: "rest",
     weekday: "sunday",
     title: "Rest · eat and sleep",
@@ -685,7 +701,7 @@ export function uniqueExercises() {
   const seen = new Set<string>();
   const list: Exercise[] = [];
   for (const day of DAYS) {
-    if (day.id === "warmup" || day.id === "rest") continue;
+    if (day.id === "warmup" || day.id === "stretch" || day.id === "rest") continue;
     for (const exercise of day.exercises) {
       if (seen.has(exercise.id)) continue;
       seen.add(exercise.id);
@@ -698,7 +714,7 @@ export function uniqueExercises() {
 export function exercisesByMuscle() {
   const groups: { group: string; exercises: Exercise[] }[] = [];
   const index = new Map<string, Exercise[]>();
-  for (const exercise of uniqueExercises()) {
+  for (const exercise of [...uniqueExercises(), ...stretchExercises()]) {
     let bucket = index.get(exercise.group);
     if (!bucket) {
       bucket = [];

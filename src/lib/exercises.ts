@@ -1,5 +1,6 @@
 import { matchesExerciseQuery } from "@/data/exercise-tags";
 import { dayById, uniqueExercises } from "@/data/program";
+import { stretchExercises } from "@/data/stretches";
 import { warmupById } from "@/data/warmup";
 import type { AthleteDoc, CustomExercise, Exercise } from "@/lib/types";
 
@@ -22,6 +23,7 @@ function customToExercise(custom: CustomExercise): Exercise {
 export function catalogExercises(athlete: AthleteDoc): Exercise[] {
   return [
     ...uniqueExercises(),
+    ...stretchExercises(),
     ...(athlete.customExercises ?? []).map(customToExercise),
   ];
 }
