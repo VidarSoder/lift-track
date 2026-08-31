@@ -9,8 +9,13 @@ import {
   summarizeSession,
   withSessionDuration,
 } from "@/lib/session";
-import { sessionDocId } from "@/lib/session-id";
-import { setLogDocId, setLogEntriesFromSession } from "@/lib/set-logs";
+import { sessionDocId, isCompositeSessionId } from "@/lib/session-id";
+import {
+  setLogDocId,
+  setLogEntriesFromSession,
+  sessionFromSetLogs,
+  type SetLogEntry,
+} from "@/lib/set-logs";
 import { athleteId } from "@/lib/server/secrets";
 import { adminDb } from "@/lib/server/firebase-admin";
 import { isAthletePayload, isSessionPayload } from "@/lib/server/validate-payload";
@@ -152,14 +157,36 @@ export async function loadSessionById(
 ): Promise<WorkoutSession | null> {
   if (!SESSION_ID.test(sessionId) && !DATE.test(sessionId)) return null;
   const id = await athleteId();
-  const snap = await adminDb()
-    .collection("athletes")
-    .doc(id)
-    .collection("sessions")
-    .doc(sessionId)
+  const db = adminDb();
+  const athleteRef = db.collection("athletes").doc(id);
+  const snap = await athleteRef.collection("sessions").doc(sessionId).get();
+  if (snap.exists) {
+    const session = snap.data() as WorkoutSession;
+    // Legacy date-only docs are read-only; never treat them as the live write target.
+    return session;
+  }
+
+  // Recover from setLogs when a composite id is missing (same-day overwrite).
+  if (!isCompositeSessionId(sessionId)) return null;
+  const parts = sessionId.split("__");
+  if (parts.length < 3) return null;
+  const [date, dayId] = parts;
+  const startedSlug = parts.slice(2).join("__");
+  const logSnap = await athleteRef
+    .collection("setLogs")
+    .where("date", "==", date)
+    .where("dayId", "==", dayId)
     .get();
-  if (!snap.exists) return null;
-  return snap.data() as WorkoutSession;
+  const entries = logSnap.docs.map((doc) => doc.data() as SetLogEntry);
+  const exact = entries.filter(
+    (entry) => entry.sessionStartedAt.replace(/[:.]/g, "-") === startedSlug,
+  );
+  const rebuilt = sessionFromSetLogs(exact.length > 0 ? exact : entries);
+  if (!rebuilt) return null;
+  await athleteRef.collection("sessions").doc(sessionId).set(rebuilt, {
+    merge: true,
+  });
+  return rebuilt;
 }
 
 export async function listSessionSummaries(options: {
@@ -232,8 +259,22 @@ export async function patchSessionDuration(
     athleteSnap.data() as AthleteDoc,
     session,
   );
+  // Always write duration to a composite id — never mutate legacy date docs in place.
+  const writeId =
+    isCompositeSessionId(sessionId) && session.startedAt
+      ? sessionId
+      : session.startedAt
+        ? sessionDocId(session)
+        : null;
+  if (!writeId) {
+    throw new Error(
+      "Cannot edit duration on a legacy session without startedAt",
+    );
+  }
   const batch = db.batch();
-  batch.set(sessionRef, session, { merge: true });
+  batch.set(athleteRef.collection("sessions").doc(writeId), session, {
+    merge: true,
+  });
   batch.set(
     athleteRef,
     { recent: athlete.recent, updatedAt: athlete.updatedAt },
@@ -275,7 +316,14 @@ export async function saveTrainingState(bundle: CacheBundle) {
 
   batch.set(athleteRef, athlete, { merge: true });
   if (bundle.today) {
+    if (!bundle.today.startedAt) {
+      throw new Error("Session is missing startedAt — refusing to save");
+    }
     const docId = sessionDocId(bundle.today);
+    // Hard guard: never write sessions/{YYYY-MM-DD} — that overwrote same-day work.
+    if (!isCompositeSessionId(docId) || docId === bundle.today.date) {
+      throw new Error(`Refusing non-composite session id: ${docId}`);
+    }
     batch.set(athleteRef.collection("sessions").doc(docId), bundle.today, {
       merge: true,
     });

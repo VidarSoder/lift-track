@@ -48,9 +48,20 @@ export function SettingsView() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const page = await fetchSessionPage({ kind: "all", limit: 200 });
-      if (cancelled || !page) return;
-      setRemoteSessions(page.items);
+      const collected: SessionSummary[] = [];
+      let cursor: string | null = null;
+      for (let page = 0; page < 50; page += 1) {
+        const result = await fetchSessionPage({
+          kind: "all",
+          limit: 40,
+          cursor,
+        });
+        if (cancelled || !result) return;
+        collected.push(...result.items);
+        if (!result.nextCursor) break;
+        cursor = result.nextCursor;
+      }
+      if (!cancelled) setRemoteSessions(collected);
     }
     void load();
     return () => {

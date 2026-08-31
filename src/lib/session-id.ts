@@ -4,8 +4,15 @@ import type { DayKind, SessionSummary, WorkoutSession } from "@/lib/types";
 export function sessionDocId(
   session: Pick<WorkoutSession, "date" | "dayId" | "startedAt">,
 ) {
+  if (!session.startedAt) {
+    throw new Error("sessionDocId requires startedAt — refusing date-only overwrite");
+  }
   const started = session.startedAt.replace(/[:.]/g, "-");
   return `${session.date}__${session.dayId}__${started}`;
+}
+
+export function isCompositeSessionId(id: string) {
+  return /^\d{4}-\d{2}-\d{2}__.+/.test(id);
 }
 
 export function sessionDocIdFromSummary(summary: SessionSummary) {
@@ -17,12 +24,18 @@ export function sessionDocIdFromSummary(summary: SessionSummary) {
   });
 }
 
-/** Try composite id first, then legacy sessions/{date}. */
+/**
+ * Resolve a session doc. Prefer composite ids.
+ * Legacy sessions/{date} is read-only fallback and must match dayId.
+ */
 export function sessionDocIdCandidates(summary: SessionSummary) {
   const ids: string[] = [];
   const composite = sessionDocIdFromSummary(summary);
   if (composite) ids.push(composite);
-  if (!ids.includes(summary.date)) ids.push(summary.date);
+  // Legacy date doc only when we have no startedAt (old rows).
+  if (!summary.startedAt && !ids.includes(summary.date)) {
+    ids.push(summary.date);
+  }
   return ids;
 }
 

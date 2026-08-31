@@ -8,20 +8,21 @@ import { cn } from "@/lib/utils";
 
 type Range = "week" | "month" | "ytd" | "all";
 
-function rangeStart(range: Range, today: string) {
+function rangeStart(range: Range, today: string, earliestSession: string) {
   if (range === "week") return addDaysISO(today, -6);
   if (range === "month") return addDaysISO(today, -29);
   if (range === "ytd") return `${today.slice(0, 4)}-01-01`;
-  return "1970-01-01";
+  // All: first logged session → today (never pad from epoch).
+  return earliestSession <= today ? earliestSession : today;
 }
 
 function eachDay(from: string, to: string) {
+  if (from > to) return [to];
   const days: string[] = [];
   let cursor = from;
   while (cursor <= to) {
     days.push(cursor);
     cursor = addDaysISO(cursor, 1);
-    if (days.length > 400) break;
   }
   return days;
 }
@@ -37,7 +38,14 @@ export function SessionDaysChart({
   const [range, setRange] = useState<Range>("month");
   const [showStretch, setShowStretch] = useState(true);
   const today = formatDateISO();
-  const start = rangeStart(range, today);
+  const earliestSession = useMemo(() => {
+    if (sessions.length === 0) return today;
+    return sessions.reduce(
+      (min, item) => (item.date < min ? item.date : min),
+      sessions[0]!.date,
+    );
+  }, [sessions, today]);
+  const start = rangeStart(range, today, earliestSession);
 
   const series = useMemo(() => {
     const days = eachDay(start, today);

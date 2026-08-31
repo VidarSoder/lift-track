@@ -71,3 +71,64 @@ export function setLogEntriesFromSession(session: WorkoutSession): SetLogEntry[]
   }
   return entries;
 }
+
+/** Rebuild a session shell from durable setLogs (same-day overwrite recovery). */
+export function sessionFromSetLogs(
+  entries: SetLogEntry[],
+  extras?: Partial<WorkoutSession>,
+): WorkoutSession | null {
+  if (entries.length === 0) return null;
+  const first = entries[0];
+  const byExercise = new Map<string, SetLogEntry[]>();
+  for (const entry of entries) {
+    const bucket = byExercise.get(entry.exerciseId) ?? [];
+    bucket.push(entry);
+    byExercise.set(entry.exerciseId, bucket);
+  }
+  const exercises = [...byExercise.entries()].map(([exerciseId, sets]) => {
+    const warm = sets
+      .filter((set) => set.kind === "warmup")
+      .sort((a, b) => a.setIndex - b.setIndex);
+    const work = sets
+      .filter((set) => set.kind !== "warmup")
+      .sort((a, b) => a.setIndex - b.setIndex);
+    return {
+      exerciseId,
+      sets: [
+        ...warm.map((set) => ({
+          weight: set.weight,
+          reps: set.reps,
+          done: set.done,
+          warmup: true as const,
+        })),
+        ...work.map((set) => ({
+          weight: set.weight,
+          reps: set.reps,
+          done: set.done,
+        })),
+      ],
+    };
+  });
+  const startedAt = first.sessionStartedAt;
+  return {
+    date: first.date,
+    dayId: first.dayId as WorkoutSession["dayId"],
+    title: first.title,
+    status: first.sessionStatus === "skipped" ? "skipped" : "completed",
+    startedAt,
+    clockStartedAt: startedAt,
+    clockEndedAt: extras?.clockEndedAt ?? extras?.finishedAt,
+    finishedAt: extras?.finishedAt ?? extras?.clockEndedAt,
+    timeOfDay: extras?.timeOfDay ?? "morning",
+    feelingBefore: extras?.feelingBefore ?? {
+      energy: 3,
+      sleep: 3,
+      soreness: 2,
+      notes: "",
+    },
+    feelingAfter: extras?.feelingAfter,
+    exercises,
+    updatedAt: new Date().toISOString(),
+    ...extras,
+  };
+}
