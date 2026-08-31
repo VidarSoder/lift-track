@@ -4,22 +4,25 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { toast } from "sonner";
 import { ExerciseHowPanel, ExerciseThumb } from "@/components/exercise-guide";
 import { ExerciseMark } from "@/components/exercise-mark";
 import { useTraining } from "@/components/training-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatNiceDate } from "@/lib/dates";
 import { resolveExercise } from "@/lib/exercises";
 import { isStretchExercise } from "@/lib/lifts";
 import {
   canReopenSession,
+  sessionDurationMin,
   sessionSetCounts,
-  workingSets,
   warmupSets,
+  workingSets,
 } from "@/lib/session";
 import { sessionDocId } from "@/lib/session-id";
-import { fetchSession } from "@/lib/store";
+import { fetchSession, patchSessionDuration } from "@/lib/store";
 import type { LoggedSet, WorkoutSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,11 +38,14 @@ export function SessionDetailView() {
   const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id")?.trim() ?? "";
-  const { athlete, todaySession, reopenEndedSession } = useTraining();
+  const { athlete, todaySession, reopenEndedSession, setAthlete } =
+    useTraining();
   const [session, setSession] = useState<WorkoutSession | null | undefined>(
     undefined,
   );
   const [openId, setOpenId] = useState<string | null>(null);
+  const [minutes, setMinutes] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,13 +67,23 @@ export function SessionDetailView() {
     };
   }, [id, todaySession]);
 
+  useEffect(() => {
+    if (!session) return;
+    setMinutes(String(sessionDurationMin(session)));
+  }, [session]);
+
   const counts = session ? sessionSetCounts(session) : null;
   const canReopen = canReopenSession(session);
+  const canEditDuration = session?.status === "completed";
   const timeline = useMemo(() => {
     if (!session) return [];
     return session.exercises
       .map((logged) => {
-        const exercise = resolveExercise(logged.exerciseId, athlete, logged.sets.length);
+        const exercise = resolveExercise(
+          logged.exerciseId,
+          athlete,
+          logged.sets.length,
+        );
         const warm = warmupSets(logged.sets).filter((set) => set.done);
         const work = workingSets(logged.sets).filter((set) => set.done);
         if (warm.length === 0 && work.length === 0) return null;
@@ -76,9 +92,33 @@ export function SessionDetailView() {
       .filter((item): item is NonNullable<typeof item> => item != null);
   }, [athlete, session]);
 
+  async function saveDuration() {
+    if (!session || !id) return;
+    const value = Number(minutes);
+    if (!Number.isFinite(value) || value < 1 || value > 600) {
+      toast.error("Enter minutes between 1 and 600.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await patchSessionDuration(id, value);
+      setSession(result.session);
+      setAthlete(result.athlete, { immediate: true });
+      toast.success(`Duration set to ${Math.round(value)} min`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Couldn’t save duration",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (session === undefined) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">Loading session…</p>
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        Loading session…
+      </p>
     );
   }
 
@@ -122,8 +162,57 @@ export function SessionDetailView() {
           {counts
             ? ` · ${counts.completedSets}/${counts.plannedSets} sets done`
             : ""}
+          {` · ${sessionDurationMin(session)} min`}
         </p>
       </header>
+
+      {canEditDuration ? (
+        <Card>
+          <CardContent className="space-y-3 pt-5">
+            <div>
+              <p className="text-xs text-muted-foreground">Session length</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Fix the clock if you forgot to finish. Start stays the same —
+                only the end moves.
+              </p>
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="min-w-0 flex-1 space-y-1.5">
+                <span className="text-xs text-muted-foreground">Minutes</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={600}
+                  value={minutes}
+                  onChange={(event) => setMinutes(event.target.value)}
+                  className="h-11 text-base"
+                />
+              </label>
+              <Button
+                type="button"
+                className="h-11 px-5"
+                disabled={saving}
+                onClick={() => void saveDuration()}
+              >
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[25, 31, 45, 60, 75].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setMinutes(String(preset))}
+                  className="h-8 rounded-full bg-secondary px-3 text-xs font-medium text-secondary-foreground"
+                >
+                  {preset} min
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {canReopen ? (
         <Button
@@ -147,7 +236,9 @@ export function SessionDetailView() {
             </p>
           </div>
           {timeline.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No completed sets in this session.</p>
+            <p className="text-sm text-muted-foreground">
+              No completed sets in this session.
+            </p>
           ) : (
             <div className="space-y-3">
               {timeline.map(({ logged, exercise, warm, work }, index) => {
@@ -174,7 +265,9 @@ export function SessionDetailView() {
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium leading-tight">{exercise.name}</p>
+                        <p className="font-medium leading-tight">
+                          {exercise.name}
+                        </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {stretch ? "Stretch" : exercise.group}
                           {warm.length > 0 ? ` · ${warm.length} warm-up` : ""}
@@ -195,7 +288,9 @@ export function SessionDetailView() {
                               key={`s-${setIndex}`}
                               className={cn(
                                 "text-sm",
-                                setIndex === 0 ? "text-foreground" : "text-muted-foreground",
+                                setIndex === 0
+                                  ? "text-foreground"
+                                  : "text-muted-foreground",
                               )}
                             >
                               Set {setIndex + 1}:{" "}

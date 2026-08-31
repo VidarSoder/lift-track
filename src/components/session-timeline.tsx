@@ -95,10 +95,12 @@ function TimelineEvent({
       ref={ref}
       className={cn(
         "relative grid grid-cols-[1.25rem_1fr] gap-3 pb-8 last:pb-0",
-        "opacity-0 translate-y-5 transition-[opacity,transform] duration-700 ease-out",
-        visible && "opacity-100 translate-y-0",
+        "translate-y-5 opacity-0 transition-[opacity,transform] duration-700 ease-out",
+        visible && "translate-y-0 opacity-100",
       )}
-      style={{ transitionDelay: visible ? `${Math.min(index, 6) * 45}ms` : "0ms" }}
+      style={{
+        transitionDelay: visible ? `${Math.min(index, 6) * 45}ms` : "0ms",
+      }}
     >
       <div className="relative flex justify-center">
         <span
@@ -149,7 +151,11 @@ function TimelineEvent({
                     {summary.mood ? ` · mood ${summary.mood}/5` : ""}
                   </p>
                 </div>
-                <ExerciseMark id={summary.dayId} size="sm" className="bg-black/35" />
+                <ExerciseMark
+                  id={summary.dayId}
+                  size="sm"
+                  className="bg-black/35"
+                />
               </div>
             </div>
           </div>
@@ -189,14 +195,24 @@ function TimelineEvent({
 
 export function SessionTimeline({
   athlete,
+  items,
   sessionHref,
   onReopen,
+  hasMore,
+  loadingMore,
+  onLoadMore,
+  showHeader = true,
 }: {
   athlete: AthleteDoc;
+  items: SessionSummary[];
   sessionHref: (summary: SessionSummary) => string;
   onReopen: (summary: SessionSummary) => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+  showHeader?: boolean;
 }) {
-  const items = athlete.recent;
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const maxVolume = useMemo(
     () => Math.max(1, ...items.map((item) => item.volume)),
     [items],
@@ -209,7 +225,21 @@ export function SessionTimeline({
     return counts;
   }, [items]);
 
-  if (items.length === 0) {
+  useEffect(() => {
+    if (!hasMore || !onLoadMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && !loadingMore) onLoadMore();
+      },
+      { rootMargin: "240px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, onLoadMore]);
+
+  if (items.length === 0 && !loadingMore) {
     return (
       <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
         <p className="text-sm text-muted-foreground">
@@ -222,15 +252,19 @@ export function SessionTimeline({
 
   return (
     <section className="space-y-4">
-      <header className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-          Log
-        </p>
-        <h2 className="font-heading text-2xl leading-none">Session timeline</h2>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Scroll the story of your training — newest at the top.
-        </p>
-      </header>
+      {showHeader ? (
+        <header className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+            Log
+          </p>
+          <h2 className="font-heading text-2xl leading-none">
+            Session timeline
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Scroll the story of your training — newest at the top.
+          </p>
+        </header>
+      ) : null}
 
       <div className="relative">
         <div
@@ -253,6 +287,12 @@ export function SessionTimeline({
             />
           ))}
         </div>
+        {hasMore ? <div ref={sentinelRef} className="h-8" /> : null}
+        {loadingMore ? (
+          <p className="pt-2 text-center text-xs text-muted-foreground">
+            Loading more…
+          </p>
+        ) : null}
       </div>
     </section>
   );

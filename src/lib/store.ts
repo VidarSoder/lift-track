@@ -130,3 +130,42 @@ export async function fetchSession(sessionId: string) {
   const body = (await response.json()) as { session?: WorkoutSession };
   return body.session ?? null;
 }
+
+export async function fetchSessionPage(options: {
+  kind?: "all" | "training" | "stretch";
+  cursor?: string | null;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (options.kind) params.set("kind", options.kind);
+  if (options.cursor) params.set("cursor", options.cursor);
+  if (options.limit) params.set("limit", String(options.limit));
+  const response = await fetch(`/api/sessions?${params.toString()}`);
+  if (response.status === 401) return null;
+  if (!response.ok) return { items: [], nextCursor: null as string | null };
+  return (await response.json()) as {
+    items: import("@/lib/types").SessionSummary[];
+    nextCursor: string | null;
+  };
+}
+
+export async function patchSessionDuration(
+  sessionId: string,
+  durationMin: number,
+) {
+  const response = await fetch("/api/session", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: sessionId, durationMin }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? "Could not update duration");
+  }
+  return (await response.json()) as {
+    session: WorkoutSession;
+    athlete: AthleteDoc;
+  };
+}

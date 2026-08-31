@@ -1,18 +1,56 @@
 import { formatDateISO } from "@/lib/dates";
 import {
+  applySessionDurationToAthlete,
   countSessionsFromDocs,
   createAthlete,
   isLiveSession,
+  isStretchDay,
+  isTrainingDay,
+  summarizeSession,
+  withSessionDuration,
 } from "@/lib/session";
 import { sessionDocId } from "@/lib/session-id";
 import { setLogDocId, setLogEntriesFromSession } from "@/lib/set-logs";
 import { athleteId } from "@/lib/server/secrets";
 import { adminDb } from "@/lib/server/firebase-admin";
 import { isAthletePayload, isSessionPayload } from "@/lib/server/validate-payload";
-import type { AthleteDoc, CacheBundle, WorkoutSession } from "@/lib/types";
+import type {
+  AthleteDoc,
+  CacheBundle,
+  SessionSummary,
+  WorkoutSession,
+} from "@/lib/types";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const SESSION_ID = /^\d{4}-\d{2}-\d{2}__.+/;
+
+function dedupeCompletedSessions(sessions: WorkoutSession[]) {
+  const withStart = sessions.filter(
+    (session) => session.status === "completed" && session.startedAt,
+  );
+  const withoutStart = sessions.filter(
+    (session) => session.status === "completed" && !session.startedAt,
+  );
+  const dayKeys = new Set(
+    withStart.map((session) => `${session.date}|${session.dayId}`),
+  );
+  const unique = [...withStart];
+  for (const session of withoutStart) {
+    if (dayKeys.has(`${session.date}|${session.dayId}`)) continue;
+    unique.push(session);
+  }
+  return unique;
+}
+
+function sortSummaries(a: SessionSummary, b: SessionSummary) {
+  const dates = b.date.localeCompare(a.date);
+  if (dates !== 0) return dates;
+  return (b.startedAt ?? "").localeCompare(a.startedAt ?? "");
+}
+
+export function summaryCursor(summary: SessionSummary) {
+  return `${summary.date}|${summary.dayId}|${summary.startedAt ?? ""}`;
+}
 
 export async function loadTrainingState(): Promise<CacheBundle> {
   const id = await athleteId();
@@ -25,7 +63,6 @@ export async function loadTrainingState(): Promise<CacheBundle> {
   let todaySession: WorkoutSession | undefined;
   const sessions = athleteRef.collection("sessions");
 
-  // Source of truth for cards: count completed docs (training vs stretch).
   const allSessions = await sessions.get();
   if (!allSessions.empty) {
     const counted = countSessionsFromDocs(
@@ -52,10 +89,12 @@ export async function loadTrainingState(): Promise<CacheBundle> {
     }
   }
 
-  // Prefer in-progress, else lastSessionId, else legacy sessions/{date}.
   const inProgress = allSessions.docs
     .map((doc) => doc.data() as WorkoutSession)
-    .find((session) => session.status === "in_progress" && isLiveSession(session, today));
+    .find(
+      (session) =>
+        session.status === "in_progress" && isLiveSession(session, today),
+    );
   if (inProgress) {
     todaySession = inProgress;
   } else {
@@ -95,6 +134,83 @@ export async function loadSessionById(
   return snap.data() as WorkoutSession;
 }
 
+export async function listSessionSummaries(options: {
+  kind?: "all" | "training" | "stretch";
+  limit?: number;
+  cursor?: string | null;
+}): Promise<{ items: SessionSummary[]; nextCursor: string | null }> {
+  const kind = options.kind ?? "all";
+  const limit = Math.max(1, Math.min(40, options.limit ?? 12));
+  const id = await athleteId();
+  const snap = await adminDb()
+    .collection("athletes")
+    .doc(id)
+    .collection("sessions")
+    .get();
+  let summaries = dedupeCompletedSessions(
+    snap.docs.map((doc) => doc.data() as WorkoutSession),
+  )
+    .map(summarizeSession)
+    .sort(sortSummaries);
+
+  if (kind === "training") {
+    summaries = summaries.filter((item) => isTrainingDay(item.dayId));
+  } else if (kind === "stretch") {
+    summaries = summaries.filter((item) => isStretchDay(item.dayId));
+  }
+
+  let start = 0;
+  if (options.cursor) {
+    const index = summaries.findIndex(
+      (item) => summaryCursor(item) === options.cursor,
+    );
+    start = index >= 0 ? index + 1 : 0;
+  }
+  const page = summaries.slice(start, start + limit);
+  const next =
+    start + limit < summaries.length
+      ? summaryCursor(page[page.length - 1]!)
+      : null;
+  return { items: page, nextCursor: next };
+}
+
+export async function patchSessionDuration(
+  sessionId: string,
+  durationMin: number,
+): Promise<{ session: WorkoutSession; athlete: AthleteDoc } | null> {
+  if (!SESSION_ID.test(sessionId) && !DATE.test(sessionId)) return null;
+  if (!Number.isFinite(durationMin) || durationMin < 1 || durationMin > 600) {
+    throw new Error("Duration must be between 1 and 600 minutes");
+  }
+  const id = await athleteId();
+  const db = adminDb();
+  const athleteRef = db.collection("athletes").doc(id);
+  const sessionRef = athleteRef.collection("sessions").doc(sessionId);
+  const [athleteSnap, sessionSnap] = await Promise.all([
+    athleteRef.get(),
+    sessionRef.get(),
+  ]);
+  if (!sessionSnap.exists || !athleteSnap.exists) return null;
+  const current = sessionSnap.data() as WorkoutSession;
+  if (current.status !== "completed") {
+    throw new Error("Only completed sessions can change duration");
+  }
+  const session = withSessionDuration(current, durationMin);
+  const athlete = applySessionDurationToAthlete(
+    athleteSnap.data() as AthleteDoc,
+    session,
+  );
+  const batch = db.batch();
+  batch.set(sessionRef, session, { merge: true });
+  batch.set(
+    athleteRef,
+    { recent: athlete.recent, updatedAt: athlete.updatedAt },
+    { merge: true },
+  );
+  await batch.commit();
+  return { session, athlete };
+}
+
 export async function saveTrainingState(bundle: CacheBundle) {
   if (!isAthletePayload(bundle.athlete)) {
     throw new Error("Invalid athlete payload");
@@ -131,7 +247,6 @@ export async function saveTrainingState(bundle: CacheBundle) {
     batch.set(athleteRef.collection("sessions").doc(docId), bundle.today, {
       merge: true,
     });
-    // Append-only durable log: same set key can be updated, never deleted.
     for (const entry of setLogEntriesFromSession(bundle.today)) {
       const ref = athleteRef.collection("setLogs").doc(setLogDocId(entry));
       batch.set(ref, entry, { merge: true });

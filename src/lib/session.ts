@@ -381,6 +381,47 @@ export function summarizeSession(session: WorkoutSession): SessionSummary {
   };
 }
 
+/** Clamp session length by moving the end clock (keeps start fixed). */
+export function withSessionDuration(
+  session: WorkoutSession,
+  durationMin: number,
+): WorkoutSession {
+  const minutes = Math.max(1, Math.min(600, Math.round(durationMin)));
+  const startIso = session.clockStartedAt ?? session.startedAt;
+  const startMs = new Date(startIso).getTime();
+  const endIso = new Date(startMs + minutes * 60_000).toISOString();
+  return {
+    ...session,
+    clockStartedAt: startIso,
+    clockEndedAt: endIso,
+    finishedAt: endIso,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function applySessionDurationToAthlete(
+  athlete: AthleteDoc,
+  session: WorkoutSession,
+): AthleteDoc {
+  const summary = summarizeSession(session);
+  return {
+    ...athlete,
+    recent: athlete.recent.map((item) =>
+      sameSessionOccurrence(item, session) ||
+      (!item.startedAt &&
+        item.date === session.date &&
+        item.dayId === session.dayId)
+        ? { ...item, ...summary }
+        : item,
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function sessionDurationMin(session: WorkoutSession) {
+  return summarizeSession(session).durationMin;
+}
+
 export function stripTodaysProgress(athlete: AthleteDoc, today: string) {
   const lastLoads = { ...(athlete.lastLoads ?? {}) };
   for (const [id, load] of Object.entries(lastLoads)) {

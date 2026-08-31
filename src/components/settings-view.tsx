@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { SessionDaysChart } from "@/components/session-days-chart";
 import { useTraining } from "@/components/training-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatNiceDate } from "@/lib/dates";
-import { liftsByExercise, stretchesByExercise } from "@/lib/lifts";
 import { displaySessionCounts } from "@/lib/session";
+import { fetchSessionPage } from "@/lib/store";
+import type { SessionSummary } from "@/lib/types";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 
 export function SettingsView() {
@@ -14,9 +17,21 @@ export function SettingsView() {
   const log = weightLog(athlete);
   const current = latestWeight(athlete);
   const delta = weightDelta(athlete);
-  const lifts = liftsByExercise(athlete);
-  const stretches = stretchesByExercise(athlete);
   const sessionCounts = displaySessionCounts(athlete);
+  const [sessions, setSessions] = useState<SessionSummary[]>(athlete.recent);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const page = await fetchSessionPage({ kind: "all", limit: 200 });
+      if (cancelled || !page) return;
+      setSessions(page.items.length > 0 ? page.items : athlete.recent);
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [athlete.recent]);
 
   return (
     <div className="space-y-5 pb-4">
@@ -26,9 +41,22 @@ export function SettingsView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">You</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Open a card to dig into weight, lifts, stretches, or session history.
+          Session cadence up top. Weight and the full session log below.
         </p>
       </header>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div>
+            <p className="text-xs text-muted-foreground">Session chart</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Cumulative days you trained — stretch as a second line when you
+              want it.
+            </p>
+          </div>
+          <SessionDaysChart sessions={sessions} />
+        </CardContent>
+      </Card>
 
       <div className="space-y-2">
         <Link href="/settings/weight" className="block">
@@ -57,38 +85,6 @@ export function SettingsView() {
           </Card>
         </Link>
 
-        <Link href="/settings/lifts" className="block">
-          <Card className="transition-colors hover:bg-muted/30">
-            <CardContent className="flex items-center justify-between gap-3 pt-5 pb-5">
-              <div className="min-w-0">
-                <p className="text-base font-medium">Lifts & PRs</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {lifts.length > 0
-                    ? `${lifts.length} lift${lifts.length === 1 ? "" : "s"} · ${Object.keys(athlete.prs).length} PR${Object.keys(athlete.prs).length === 1 ? "" : "s"}`
-                    : "Working sets, warm-ups, and charts per lift."}
-                </p>
-              </div>
-              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/settings/stretches" className="block">
-          <Card className="transition-colors hover:bg-muted/30">
-            <CardContent className="flex items-center justify-between gap-3 pt-5 pb-5">
-              <div className="min-w-0">
-                <p className="text-base font-medium">Stretch log</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {stretches.length > 0
-                    ? `${stretches.length} stretch${stretches.length === 1 ? "" : "es"} tracked`
-                    : "Mobility moves from stretch sessions."}
-                </p>
-              </div>
-              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-
         <Link href="/settings/sessions" className="block">
           <Card className="transition-colors hover:bg-muted/30">
             <CardContent className="flex items-center justify-between gap-3 pt-5 pb-5">
@@ -99,6 +95,8 @@ export function SettingsView() {
                   {sessionCounts.stretch > 0
                     ? ` · ${sessionCounts.stretch} stretch`
                     : ""}
+                  {" · "}
+                  timeline & filters
                 </p>
               </div>
               <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
