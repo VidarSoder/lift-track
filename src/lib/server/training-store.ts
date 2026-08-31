@@ -48,6 +48,34 @@ function sortSummaries(a: SessionSummary, b: SessionSummary) {
   return (b.startedAt ?? "").localeCompare(a.startedAt ?? "");
 }
 
+/** Prefer richer rows; keep recent entries when session docs were overwritten. */
+export function mergeSessionSummaries(
+  ...lists: Array<SessionSummary[] | undefined>
+) {
+  const map = new Map<string, SessionSummary>();
+  for (const list of lists) {
+    for (const item of list ?? []) {
+      const dayKey = `${item.date}|${item.dayId}`;
+      const key = item.startedAt
+        ? `${dayKey}|${item.startedAt}`
+        : dayKey;
+      if (item.startedAt) {
+        // Drop legacy same-day row without startedAt once a concrete one exists.
+        map.delete(dayKey);
+      } else if (
+        [...map.keys()].some(
+          (existing) =>
+            existing.startsWith(`${dayKey}|`) && existing !== dayKey,
+        )
+      ) {
+        continue;
+      }
+      map.set(key, item);
+    }
+  }
+  return [...map.values()].sort(sortSummaries);
+}
+
 export function summaryCursor(summary: SessionSummary) {
   return `${summary.date}|${summary.dayId}|${summary.startedAt ?? ""}`;
 }
@@ -142,16 +170,20 @@ export async function listSessionSummaries(options: {
   const kind = options.kind ?? "all";
   const limit = Math.max(1, Math.min(40, options.limit ?? 12));
   const id = await athleteId();
-  const snap = await adminDb()
-    .collection("athletes")
-    .doc(id)
-    .collection("sessions")
-    .get();
-  let summaries = dedupeCompletedSessions(
-    snap.docs.map((doc) => doc.data() as WorkoutSession),
-  )
-    .map(summarizeSession)
-    .sort(sortSummaries);
+  const db = adminDb();
+  const athleteRef = db.collection("athletes").doc(id);
+  const [athleteSnap, sessionsSnap] = await Promise.all([
+    athleteRef.get(),
+    athleteRef.collection("sessions").get(),
+  ]);
+  const athlete = athleteSnap.exists
+    ? (athleteSnap.data() as AthleteDoc)
+    : null;
+  const fromDocs = dedupeCompletedSessions(
+    sessionsSnap.docs.map((doc) => doc.data() as WorkoutSession),
+  ).map(summarizeSession);
+  // recent fills gaps when a later same-day session overwrote the date doc.
+  let summaries = mergeSessionSummaries(fromDocs, athlete?.recent);
 
   if (kind === "training") {
     summaries = summaries.filter((item) => isTrainingDay(item.dayId));
