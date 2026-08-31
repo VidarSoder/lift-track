@@ -714,7 +714,7 @@ export function uniqueExercises() {
 export function exercisesByMuscle() {
   const groups: { group: string; exercises: Exercise[] }[] = [];
   const index = new Map<string, Exercise[]>();
-  for (const exercise of [...uniqueExercises(), ...stretchExercises()]) {
+  for (const exercise of uniqueExercises()) {
     let bucket = index.get(exercise.group);
     if (!bucket) {
       bucket = [];
@@ -722,6 +722,13 @@ export function exercisesByMuscle() {
       groups.push({ group: exercise.group, exercises: bucket });
     }
     bucket.push(exercise);
+  }
+  const stretchBucket: Exercise[] = [];
+  for (const exercise of stretchExercises()) {
+    stretchBucket.push(exercise);
+  }
+  if (stretchBucket.length > 0) {
+    groups.push({ group: "Stretch", exercises: stretchBucket });
   }
   return groups;
 }

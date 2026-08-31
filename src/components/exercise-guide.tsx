@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown, ExternalLink, Pause, Play } from "lucide-react";
 import { displayTags } from "@/data/exercise-tags";
 import type { Exercise, LastLoad } from "@/lib/types";
-import { mediaFor, photoUrl, youtubeThumb, youtubeWatch } from "@/data/media";
+import {
+  mediaFor,
+  mediaStartSrc,
+  mediaSteps,
+  type ExerciseMedia,
+  youtubeThumb,
+  youtubeWatch,
+} from "@/data/media";
 import { lastLoad } from "@/lib/session";
 import { ExerciseMark, markEdge } from "@/components/exercise-mark";
 import { CloseButton } from "@/components/close-button";
@@ -14,62 +21,101 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function FormLoop({
-  slug,
-  youtube,
+  media,
   alt,
   className,
   fit = "contain",
 }: {
-  slug: string;
-  youtube: string;
+  media: ExerciseMedia;
   alt: string;
   className?: string;
   fit?: "contain" | "cover";
 }) {
-  const [frame, setFrame] = useState<0 | 1>(0);
+  const steps = mediaSteps(media);
+  const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(true);
   const [broken, setBroken] = useState(false);
   const objectClass = fit === "cover" ? "object-cover" : "object-contain";
 
   useEffect(() => {
-    if (broken) return;
-    const timer = window.setInterval(() => {
-      setFrame((current) => (current === 0 ? 1 : 0));
-    }, 750);
-    return () => window.clearInterval(timer);
-  }, [broken]);
+    setIndex(0);
+  }, [media.slug, steps.length]);
 
-  if (broken) {
+  useEffect(() => {
+    if (broken || !playing || steps.length < 2) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % steps.length);
+    }, 1100);
+    return () => window.clearInterval(timer);
+  }, [broken, playing, steps.length]);
+
+  if (broken || steps.length === 0) {
     return (
       <img
-        src={youtubeThumb(youtube)}
+        src={youtubeThumb(media.youtube)}
         alt={alt}
         className={cn("h-full w-full bg-black object-cover", className)}
       />
     );
   }
 
+  const active = steps[index] ?? steps[0];
+
   return (
     <div className={cn("relative h-full w-full bg-black", className)}>
-      <img
-        src={photoUrl(slug, 0)}
-        alt={`${alt} start`}
-        className={cn(
-          "absolute inset-0 h-full w-full bg-black transition-opacity duration-200",
-          objectClass,
-          frame === 0 ? "opacity-100" : "opacity-0",
-        )}
-        onError={() => setBroken(true)}
-      />
-      <img
-        src={photoUrl(slug, 1)}
-        alt={`${alt} finish`}
-        className={cn(
-          "absolute inset-0 h-full w-full bg-black transition-opacity duration-200",
-          objectClass,
-          frame === 1 ? "opacity-100" : "opacity-0",
-        )}
-        onError={() => setBroken(true)}
-      />
+      {steps.map((step, stepIndex) => (
+        <img
+          key={`${step.src}-${step.label}`}
+          src={step.src}
+          alt={`${alt} ${step.label}`}
+          className={cn(
+            "absolute inset-0 h-full w-full bg-black transition-opacity duration-200",
+            objectClass,
+            stepIndex === index ? "opacity-100" : "opacity-0",
+          )}
+          onError={() => setBroken(true)}
+        />
+      ))}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-2.5 pt-8">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-medium uppercase tracking-wide text-white/85">
+            {active.label}
+          </p>
+          {steps.length > 2 ? (
+            <div className="mt-1.5 flex gap-1">
+              {steps.map((step, stepIndex) => (
+                <button
+                  key={`dot-${step.label}`}
+                  type="button"
+                  aria-label={`Show ${step.label}`}
+                  onClick={() => {
+                    setPlaying(false);
+                    setIndex(stepIndex);
+                  }}
+                  className={cn(
+                    "pointer-events-auto size-1.5 rounded-full transition",
+                    stepIndex === index ? "bg-white" : "bg-white/35",
+                  )}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {steps.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => setPlaying((current) => !current)}
+            className="pointer-events-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition hover:bg-white/25"
+            aria-label={playing ? "Pause form loop" : "Play form loop"}
+          >
+            {playing ? (
+              <Pause className="size-4 fill-current" />
+            ) : (
+              <Play className="size-4 fill-current" />
+            )}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -103,14 +149,13 @@ export function ExerciseThumb({
   }
   return (
     <img
-      src={photoUrl(media.slug, 0)}
+      src={mediaStartSrc(media)}
       alt={name}
       className={cn("h-full w-full bg-black object-cover", className)}
       onError={() => setBroken(true)}
     />
   );
 }
-
 
 function loadLabel(load: LastLoad | null) {
   if (!load) return null;
@@ -120,6 +165,28 @@ function loadLabel(load: LastLoad | null) {
   return load.reps
     ? `Last ${load.weight} kg × ${load.reps}`
     : `Last ${load.weight} kg`;
+}
+
+function StepStrip({ media, alt }: { media: ExerciseMedia; alt: string }) {
+  const steps = mediaSteps(media);
+  const cols =
+    steps.length >= 3 ? "grid-cols-3" : steps.length === 1 ? "grid-cols-1" : "grid-cols-2";
+  return (
+    <div className={cn("grid gap-2", cols)}>
+      {steps.map((step) => (
+        <figure key={`${step.label}-${step.src}`} className="overflow-hidden rounded-lg bg-black">
+          <img
+            src={step.src}
+            alt={`${alt} ${step.label}`}
+            className="aspect-[4/5] w-full object-contain"
+          />
+          <figcaption className="bg-secondary px-1.5 py-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            {step.label}
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  );
 }
 
 export function ExerciseRow({
@@ -195,38 +262,11 @@ export function ExerciseRow({
 
           {media ? (
             <div className="aspect-[5/4] overflow-hidden rounded-xl bg-black">
-              <FormLoop
-                slug={media.slug}
-                youtube={media.youtube}
-                alt={exercise.name}
-              />
+              <FormLoop media={media} alt={exercise.name} />
             </div>
           ) : null}
 
-          {media ? (
-            <div className="grid grid-cols-2 gap-2">
-              <figure className="overflow-hidden rounded-lg bg-black">
-                <img
-                  src={photoUrl(media.slug, 0)}
-                  alt={`${exercise.name} start`}
-                  className="aspect-[4/5] w-full object-contain"
-                />
-                <figcaption className="bg-secondary px-2 py-1 text-center text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Start
-                </figcaption>
-              </figure>
-              <figure className="overflow-hidden rounded-lg bg-black">
-                <img
-                  src={photoUrl(media.slug, 1)}
-                  alt={`${exercise.name} finish`}
-                  className="aspect-[4/5] w-full object-contain"
-                />
-                <figcaption className="bg-secondary px-2 py-1 text-center text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Finish
-                </figcaption>
-              </figure>
-            </div>
-          ) : null}
+          {media ? <StepStrip media={media} alt={exercise.name} /> : null}
 
           <div className="space-y-2 text-sm leading-6 text-muted-foreground">
             <p>
@@ -365,9 +405,10 @@ export function ExerciseHowPanel({
       </div>
       {media ? (
         <div className="aspect-[5/4] overflow-hidden rounded-xl bg-black">
-          <FormLoop slug={media.slug} youtube={media.youtube} alt={exercise.name} />
+          <FormLoop media={media} alt={exercise.name} />
         </div>
       ) : null}
+      {media ? <StepStrip media={media} alt={exercise.name} /> : null}
       <p className="text-sm leading-6 text-muted-foreground">
         <span className="font-medium text-foreground">The rep. </span>
         {exercise.how}

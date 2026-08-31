@@ -1,5 +1,6 @@
 import { formatDateISO } from "@/lib/dates";
 import { createAthlete, isLiveSession } from "@/lib/session";
+import { sessionDocId } from "@/lib/session-id";
 import { setLogDocId, setLogEntriesFromSession } from "@/lib/set-logs";
 import { athleteId } from "@/lib/server/secrets";
 import { adminDb } from "@/lib/server/firebase-admin";
@@ -7,6 +8,7 @@ import { isAthletePayload, isSessionPayload } from "@/lib/server/validate-payloa
 import type { AthleteDoc, CacheBundle, WorkoutSession } from "@/lib/types";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const SESSION_ID = /^\d{4}-\d{2}-\d{2}__.+/;
 
 export async function loadTrainingState(): Promise<CacheBundle> {
   const id = await athleteId();
@@ -17,18 +19,42 @@ export async function loadTrainingState(): Promise<CacheBundle> {
   const athlete = snap.exists ? (snap.data() as AthleteDoc) : createAthlete(today);
 
   let todaySession: WorkoutSession | undefined;
-  const lastDate = athlete.lastSessionDate;
-  if (lastDate && DATE.test(lastDate)) {
-    const sessionSnap = await athleteRef.collection("sessions").doc(lastDate).get();
-    if (sessionSnap.exists) {
-      const session = sessionSnap.data() as WorkoutSession;
-      if (isLiveSession(session, today)) {
-        todaySession = session;
-      }
+  const sessions = athleteRef.collection("sessions");
+
+  // Prefer explicit multi-session id; fall back to legacy sessions/{date}.
+  const candidates = [
+    athlete.lastSessionId,
+    athlete.lastSessionDate && DATE.test(athlete.lastSessionDate)
+      ? athlete.lastSessionDate
+      : null,
+  ].filter((value): value is string => Boolean(value));
+
+  for (const docId of candidates) {
+    const sessionSnap = await sessions.doc(docId).get();
+    if (!sessionSnap.exists) continue;
+    const session = sessionSnap.data() as WorkoutSession;
+    if (isLiveSession(session, today)) {
+      todaySession = session;
+      break;
     }
   }
 
   return { athlete, today: todaySession };
+}
+
+export async function loadSessionById(
+  sessionId: string,
+): Promise<WorkoutSession | null> {
+  if (!SESSION_ID.test(sessionId) && !DATE.test(sessionId)) return null;
+  const id = await athleteId();
+  const snap = await adminDb()
+    .collection("athletes")
+    .doc(id)
+    .collection("sessions")
+    .doc(sessionId)
+    .get();
+  if (!snap.exists) return null;
+  return snap.data() as WorkoutSession;
 }
 
 export async function saveTrainingState(bundle: CacheBundle) {
@@ -52,9 +78,19 @@ export async function saveTrainingState(bundle: CacheBundle) {
   const db = adminDb();
   const athleteRef = db.collection("athletes").doc(id);
   const batch = db.batch();
-  batch.set(athleteRef, bundle.athlete, { merge: true });
+
+  const athlete: AthleteDoc = bundle.today
+    ? {
+        ...bundle.athlete,
+        lastSessionId: sessionDocId(bundle.today),
+        lastSessionDate: bundle.today.date,
+      }
+    : bundle.athlete;
+
+  batch.set(athleteRef, athlete, { merge: true });
   if (bundle.today) {
-    batch.set(athleteRef.collection("sessions").doc(bundle.today.date), bundle.today, {
+    const docId = sessionDocId(bundle.today);
+    batch.set(athleteRef.collection("sessions").doc(docId), bundle.today, {
       merge: true,
     });
     // Append-only durable log: same set key can be updated, never deleted.
@@ -64,5 +100,5 @@ export async function saveTrainingState(bundle: CacheBundle) {
     }
   }
   await batch.commit();
-  return bundle;
+  return { athlete, today: bundle.today };
 }

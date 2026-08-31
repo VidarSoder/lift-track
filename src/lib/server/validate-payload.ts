@@ -90,10 +90,12 @@ export function isAthletePayload(value: unknown): value is AthleteDoc {
     isDateString(data.programStartDate) &&
     (data.lastSessionDate == null || isDateString(data.lastSessionDate)) &&
     isFiniteNumber(data.sessionsCompleted, 0, 10000) &&
+    (data.stretchSessionsCompleted == null ||
+      isFiniteNumber(data.stretchSessionsCompleted, 0, 10000)) &&
     isFiniteNumber(data.streak, 0, 10000) &&
     typeof data.updatedAt === "string" &&
     Array.isArray(data.recent) &&
-    data.recent.length <= 12 &&
+    data.recent.length <= 20 &&
     isBodyWeightLog(data.bodyWeight) &&
     (data.bikeLog == null ||
       (Array.isArray(data.bikeLog) && data.bikeLog.length <= 80 && data.bikeLog.every(isBikeEntry))) &&

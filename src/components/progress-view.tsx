@@ -7,11 +7,24 @@ import { ChevronDown } from "lucide-react";
 import { CloseButton } from "@/components/close-button";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
-import { formatLiftPoint, liftsByExercise, warmupsByExercise } from "@/lib/lifts";
+import {
+  formatLiftPoint,
+  liftsByExercise,
+  pointsForExercise,
+  stretchesByExercise,
+  warmupsByExercise,
+} from "@/lib/lifts";
 import { resolveExercise } from "@/lib/exercises";
-import { canReopenSession } from "@/lib/session";
+import {
+  canReopenSession,
+  canReopenSummary,
+  isStretchDay,
+} from "@/lib/session";
+import { sessionDocId, sessionDocIdFromSummary } from "@/lib/session-id";
+import { fetchSession } from "@/lib/store";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
-import { WeightChart } from "@/components/weight-chart";
+import type { SessionSummary } from "@/lib/types";
+import { TrendChart, WeightChart } from "@/components/weight-chart";
 import { useTraining } from "@/components/training-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +65,7 @@ export function ProgressView() {
   const { athlete, todaySession, reopenEndedSession } = useTraining();
   const [group, setGroup] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [liftKind, setLiftKind] = useState<"work" | "warmup">("work");
   const body = latestWeight(athlete);
   const weighIns = weightLog(athlete);
   const delta = weightDelta(athlete);
@@ -64,6 +78,7 @@ export function ProgressView() {
   );
   const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
   const lifts = useMemo(() => liftsByExercise(athlete), [athlete]);
+  const stretches = useMemo(() => stretchesByExercise(athlete), [athlete]);
   const warmups = useMemo(() => warmupsByExercise(athlete), [athlete]);
   const groups = useMemo(
     () => ["all", ...new Set(lifts.map((item) => item.group))],
@@ -73,11 +88,6 @@ export function ProgressView() {
   const today = formatDateISO();
   const latest = athlete.recent[0];
   const latestIsToday = latest?.date === today;
-  const canReopen =
-    Boolean(todaySession) &&
-    canReopenSession(todaySession) &&
-    latest?.date === todaySession?.date &&
-    latest?.dayId === todaySession?.dayId;
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
       const exercise = resolveExercise(id, athlete);
@@ -85,6 +95,27 @@ export function ProgressView() {
     })
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 8);
+
+  async function reopenSummary(summary: SessionSummary) {
+    const docId = sessionDocIdFromSummary(summary);
+    if (!docId) return;
+    if (todaySession && sessionDocId(todaySession) === docId && canReopenSession(todaySession)) {
+      reopenEndedSession(todaySession);
+      router.push("/workout");
+      return;
+    }
+    const remote = await fetchSession(docId);
+    if (!remote || !canReopenSession(remote)) return;
+    reopenEndedSession(remote);
+    router.push("/workout");
+  }
+
+  function sessionHref(summary: SessionSummary) {
+    const docId = sessionDocIdFromSummary(summary);
+    if (docId) return `/progress/session?id=${encodeURIComponent(docId)}`;
+    // Legacy recent row without startedAt — best-effort date doc.
+    return `/progress/session?id=${encodeURIComponent(summary.date)}`;
+  }
 
   return (
     <div className="space-y-5 pb-4">
@@ -104,38 +135,44 @@ export function ProgressView() {
         <Card className="border-primary/25 bg-primary/8">
           <CardContent className="space-y-2 pt-5">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              {latestIsToday ? "Today" : "Latest session"}
+              {latestIsToday
+                ? isStretchDay(latest.dayId)
+                  ? "Today · stretch"
+                  : "Today"
+                : isStretchDay(latest.dayId)
+                  ? "Latest stretch session"
+                  : "Latest session"}
             </p>
-            <p className="font-heading text-2xl leading-none tracking-tight">
-              {latest.title.split("·")[0].trim()}
-            </p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {formatNiceDate(latest.date)} · {latest.durationMin} min ·{" "}
-              {latest.completedSets}/{latest.plannedSets} sets
-              {latest.volume > 0 ? ` · ${latest.volume} kg` : ""}
-            </p>
-            {latest.mood ? (
-              <p className="text-sm text-muted-foreground">
-                Mood {latest.mood}/5
-                {latest.pump ? ` · pump ${latest.pump}/5` : ""}
+            <Link href={sessionHref(latest)} className="block">
+              <p className="font-heading text-2xl leading-none tracking-tight">
+                {latest.title.split("·")[0].trim()}
               </p>
-            ) : null}
-            {canReopen && todaySession ? (
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {formatNiceDate(latest.date)} · {latest.durationMin} min ·{" "}
+                {latest.completedSets}/{latest.plannedSets} sets
+                {latest.volume > 0 ? ` · ${latest.volume} kg` : ""}
+              </p>
+              {latest.mood ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Mood {latest.mood}/5
+                  {latest.pump ? ` · pump ${latest.pump}/5` : ""}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs font-medium text-primary">Open timeline →</p>
+            </Link>
+            {canReopenSummary(latest) ? (
               <div className="pt-1">
                 <Button
                   type="button"
                   variant="outline"
                   className="h-11 w-full"
-                  onClick={() => {
-                    reopenEndedSession(todaySession);
-                    router.push("/workout");
-                  }}
+                  onClick={() => void reopenSummary(latest)}
                 >
                   Reopen session
                 </Button>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Want to keep going? Reopen within 24 hours — Home and Workout
-                  stay free for a new session.
+                  Within 24 hours you can reopen this one, or start another session
+                  from Home / Workout.
                 </p>
               </div>
             ) : null}
@@ -143,7 +180,7 @@ export function ProgressView() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Card>
           <CardContent className="pt-4">
             <p className="text-[11px] text-muted-foreground">Sessions</p>
@@ -152,7 +189,15 @@ export function ProgressView() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-[11px] text-muted-foreground">Lifts tracked</p>
+            <p className="text-[11px] text-muted-foreground">Stretch</p>
+            <p className="text-2xl font-semibold">
+              {athlete.stretchSessionsCompleted ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-[11px] text-muted-foreground">Lifts</p>
             <p className="text-2xl font-semibold">{lifts.length}</p>
           </CardContent>
         </Card>
@@ -169,7 +214,8 @@ export function ProgressView() {
           <div>
             <p className="text-xs text-muted-foreground">Lifts you have logged</p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Last working set each day. Tap a row for the dates.
+              Tap a lift for weight × reps history. Toggle warm-up vs working sets
+              and open the full chart.
             </p>
           </div>
           {lifts.length === 0 ? (
@@ -198,14 +244,32 @@ export function ProgressView() {
               </div>
               {visible.map((item) => {
                 const open = openId === item.exerciseId;
+                const workPoints = pointsForExercise(
+                  athlete,
+                  item.exerciseId,
+                  "work",
+                );
+                const warmupPoints = pointsForExercise(
+                  athlete,
+                  item.exerciseId,
+                  "warmup",
+                );
+                const kindPoints =
+                  liftKind === "work" ? workPoints : warmupPoints;
+                const chartPoints = kindPoints.map((point) => ({
+                  date: point.date,
+                  value: point.weight,
+                }));
+                const unit = kindPoints[kindPoints.length - 1]?.unit ?? item.unit;
                 return (
                   <div key={item.exerciseId} className="rounded-2xl bg-secondary/60 px-3 py-3">
                     <button
                       type="button"
                       className="flex w-full items-start justify-between gap-3 text-left"
-                      onClick={() =>
-                        setOpenId(open ? null : item.exerciseId)
-                      }
+                      onClick={() => {
+                        setOpenId(open ? null : item.exerciseId);
+                        setLiftKind("work");
+                      }}
                     >
                       <div className="min-w-0">
                         <p className="font-medium leading-tight">{item.name}</p>
@@ -233,27 +297,75 @@ export function ProgressView() {
                       </p>
                     )}
                     {open ? (
-                      <div className="mt-3 space-y-1.5">
-                        <div className="flex justify-end">
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="grid flex-1 grid-cols-2 gap-1 rounded-xl bg-background/80 p-1">
+                            {(
+                              [
+                                ["work", "Work", workPoints.length],
+                                ["warmup", "Warm-up", warmupPoints.length],
+                              ] as const
+                            ).map(([id, label, count]) => (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => setLiftKind(id)}
+                                className={cn(
+                                  "h-8 rounded-lg text-xs font-medium",
+                                  liftKind === id
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                {label}
+                                {count > 0 ? ` · ${count}` : ""}
+                              </button>
+                            ))}
+                          </div>
                           <CloseButton
                             onClick={() => setOpenId(null)}
                             label="Close lift history"
                           />
                         </div>
-                        {[...item.points].reverse().map((point) => (
-                          <div
-                            key={`${point.date}-${point.weight}-${point.reps}`}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <p className="text-muted-foreground">
-                              {formatNiceDate(point.date)}
-                            </p>
-                            <p className="font-medium">
-                              {formatLiftPoint(point)}
-                              {point.sets > 1 ? ` · ${point.sets} sets` : ""}
-                            </p>
-                          </div>
-                        ))}
+                        {kindPoints.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {liftKind === "work"
+                              ? "No working sets logged yet."
+                              : "No warm-up sets logged yet."}
+                          </p>
+                        ) : (
+                          <>
+                            {chartPoints.length >= 2 ? (
+                              <TrendChart
+                                points={chartPoints}
+                                unit={unit}
+                                decimals={unit === "kg" ? 1 : 0}
+                              />
+                            ) : null}
+                            <div className="space-y-1.5">
+                              {[...kindPoints].reverse().map((point) => (
+                                <div
+                                  key={`${point.date}-${point.kind}-${point.weight}-${point.reps}-${point.sets}`}
+                                  className="flex items-center justify-between text-sm"
+                                >
+                                  <p className="text-muted-foreground">
+                                    {formatNiceDate(point.date)}
+                                  </p>
+                                  <p className="font-medium">
+                                    {formatLiftPoint(point)}
+                                    {point.sets > 1 ? ` · ${point.sets} sets` : ""}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        <Link
+                          href={`/settings/lifts/detail?id=${encodeURIComponent(item.exerciseId)}`}
+                          className="block text-xs font-medium text-primary"
+                        >
+                          Open full lift page →
+                        </Link>
                       </div>
                     ) : null}
                   </div>
@@ -263,6 +375,43 @@ export function ProgressView() {
           )}
         </CardContent>
       </Card>
+
+      {stretches.length > 0 ? (
+        <Card>
+          <CardContent className="space-y-2.5 pt-5">
+            <div>
+              <p className="text-xs text-muted-foreground">Stretch log</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Separate from strength lifts — by stretch region.
+              </p>
+            </div>
+            {stretches.map((item) => (
+              <Link
+                key={`st-${item.exerciseId}`}
+                href={`/settings/lifts/detail?id=${encodeURIComponent(item.exerciseId)}`}
+                className="block rounded-xl bg-secondary/40 px-3 py-2 transition-colors hover:bg-secondary/70"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-tight">{item.name}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {item.group} · {formatLiftPoint(item.last)}
+                      {item.delta != null
+                        ? ` · ${item.delta > 0 ? "+" : ""}${item.delta} ${item.unit}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+                {item.points.length >= 2 ? (
+                  <div className="mt-1.5 opacity-70">
+                    <Spark points={item.points.slice(-8)} />
+                  </div>
+                ) : null}
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {warmups.length > 0 ? (
         <Card>
@@ -276,9 +425,10 @@ export function ProgressView() {
             {warmups
               .filter((item) => group === "all" || item.group === group)
               .map((item) => (
-                <div
+                <Link
                   key={`wu-${item.exerciseId}`}
-                  className="rounded-xl bg-secondary/40 px-3 py-2"
+                  href={`/settings/lifts/detail?id=${encodeURIComponent(item.exerciseId)}`}
+                  className="block rounded-xl bg-secondary/40 px-3 py-2 transition-colors hover:bg-secondary/70"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -298,7 +448,7 @@ export function ProgressView() {
                       <Spark points={item.points.slice(-8)} />
                     </div>
                   ) : null}
-                </div>
+                </Link>
               ))}
           </CardContent>
         </Card>
@@ -400,29 +550,55 @@ export function ProgressView() {
               Finish a session and the bar chart shows up here.
             </p>
           ) : (
-            athlete.recent.map((item, index) => (
-              <div
-                key={`${item.date}-${item.dayId}`}
-                className={cn("space-y-1", index === 0 && "rounded-xl bg-primary/8 p-2")}
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium">
-                    {index === 0 ? "Newest · " : ""}
-                    {item.date} · {item.title.split("·")[0]}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {item.volume} kg · {item.completedSets}/{item.plannedSets}
-                  </span>
+            athlete.recent.map((item, index) => {
+              const href = sessionHref(item);
+              const reopen = canReopenSummary(item);
+              return (
+                <div
+                  key={`${item.date}-${item.dayId}-${item.startedAt ?? index}`}
+                  className={cn("space-y-1", index === 0 && "rounded-xl bg-primary/8 p-2")}
+                >
+                  <Link href={href} className="block space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium">
+                        {index === 0 ? "Newest · " : ""}
+                        {item.date} ·{" "}
+                        {isStretchDay(item.dayId)
+                          ? "Stretch"
+                          : item.title.split("·")[0]}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {item.volume > 0
+                          ? `${item.volume} kg · `
+                          : ""}
+                        {item.completedSets}/{item.plannedSets}
+                      </span>
+                    </div>
+                    <Bar value={item.volume} max={maxVolume} />
+                    {item.mood ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        Mood {item.mood}/5
+                        {item.pump ? ` · pump ${item.pump}/5` : ""} ·{" "}
+                        {item.durationMin} min
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.durationMin} min · tap for timeline
+                      </p>
+                    )}
+                  </Link>
+                  {reopen ? (
+                    <button
+                      type="button"
+                      onClick={() => void reopenSummary(item)}
+                      className="text-[11px] font-medium text-primary underline"
+                    >
+                      Reopen within 24h
+                    </button>
+                  ) : null}
                 </div>
-                <Bar value={item.volume} max={maxVolume} />
-                {item.mood ? (
-                  <p className="text-[11px] text-muted-foreground">
-                    Mood {item.mood}/5
-                    {item.pump ? ` · pump ${item.pump}/5` : ""} · {item.durationMin} min
-                  </p>
-                ) : null}
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>
@@ -434,16 +610,20 @@ export function ProgressView() {
         <CardContent className="space-y-2">
           {namedPrs.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              PRs appear after you finish a session with saved sets.
+              PRs need a training session with at least two loaded lifts.
             </p>
           ) : (
             namedPrs.map((pr) => (
-              <div key={pr.id} className="flex items-center justify-between text-sm">
+              <Link
+                key={pr.id}
+                href={`/settings/lifts/detail?id=${encodeURIComponent(pr.id)}`}
+                className="flex items-center justify-between text-sm hover:text-primary"
+              >
                 <span>{pr.name}</span>
                 <span className="font-medium">
                   {pr.weight} kg × {pr.reps}
                 </span>
-              </div>
+              </Link>
             ))
           )}
         </CardContent>

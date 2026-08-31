@@ -1,10 +1,35 @@
+export type MediaStep = {
+  src: string;
+  label: string;
+};
+
 export type ExerciseMedia = {
-  slug: string;
   youtube: string;
+  /**
+   * free-exercise-db folder name. Used for thumbnails and as the default
+   * start/finish pair (0.jpg → start, 1.jpg → finish) when steps/overrides omit.
+   */
+  slug: string;
+  /** Full step sequence (preferred for multi-step stretches). */
+  steps?: MediaStep[];
+  /** Override start frame (absolute URL or app path like /media/…). */
+  start?: string;
+  /** Override finish/hold frame (absolute URL or app path like /media/…). */
+  finish?: string;
+  /** free-exercise-db frame indices when not using start/finish URLs. */
+  frames?: { start: 0 | 1; finish: 0 | 1 };
+  startSlug?: string;
+  finishSlug?: string;
+  startFrame?: 0 | 1;
+  finishFrame?: 0 | 1;
 };
 
 const PHOTO =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+
+function dbPhoto(slug: string, frame: 0 | 1 = 0) {
+  return `${PHOTO}/${slug}/${frame}.jpg`;
+}
 
 export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "bench-press": {
@@ -80,8 +105,30 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
   "bike-easy-8": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
   "bike-ramp-10": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
   "bike-hard-then-easy": { slug: "Air_Bike", youtube: "WhoKN__HOlM" },
-  "cat-cow": { slug: "Cat_Stretch", youtube: "y39PrKY_4JM" },
-  "neck-side-stretch": { slug: "Side_Neck_Stretch", youtube: "SedzswEwpPw" },
+
+  // Stretches — multi-step sequences where the move is easy to misread.
+  "cat-cow": {
+    slug: "Cat_Stretch",
+    youtube: "y39PrKY_4JM",
+    steps: [
+      {
+        src: "/media/stretches/cat-cow-tabletop.jpg",
+        label: "1 · Tabletop",
+      },
+      {
+        src: "/media/stretches/cat-cow-cow-pose.jpg",
+        label: "2 · Cow",
+      },
+      {
+        src: "/media/stretches/cat-cow-cat-pose.jpg",
+        label: "3 · Cat",
+      },
+    ],
+  },
+  "neck-side-stretch": {
+    slug: "Side_Neck_Stretch",
+    youtube: "SedzswEwpPw",
+  },
   "cross-body-shoulder-stretch": {
     slug: "Shoulder_Stretch",
     youtube: "6jHsraw2NIk",
@@ -90,16 +137,95 @@ export const EXERCISE_MEDIA: Record<string, ExerciseMedia> = {
     slug: "Triceps_Stretch",
     youtube: "6jHsraw2NIk",
   },
-  "childs-pose": { slug: "Childs_Pose", youtube: "RSoK_QxeRlE" },
-  "knee-to-chest": { slug: "Hug_Knees_To_Chest", youtube: "o8gAyDUh2bs" },
   "behind-back-biceps-stretch": {
     slug: "Standing_Biceps_Stretch",
     youtube: "w9cj-dovK3o",
+    steps: [
+      {
+        src: dbPhoto("Shoulder_Stretch", 0),
+        label: "1 · Stand tall",
+      },
+      {
+        src: dbPhoto("Standing_Biceps_Stretch", 0),
+        label: "2 · Clasp behind",
+      },
+      {
+        src: dbPhoto("Standing_Biceps_Stretch", 1),
+        label: "3 · Fold & lift",
+      },
+    ],
+  },
+  "childs-pose": {
+    slug: "Childs_Pose",
+    youtube: "RSoK_QxeRlE",
+    // Same gym model for steps 1–2 so the fold is readable; side angle clarifies hips-to-heels.
+    steps: [
+      {
+        src: "/media/stretches/childs-pose-1-fold.jpg",
+        label: "1 · Sit back & fold",
+      },
+      {
+        src: "/media/stretches/childs-pose-2-reach.jpg",
+        label: "2 · Reach arms forward",
+      },
+      {
+        src: "/media/stretches/childs-pose-3-side.jpg",
+        label: "3 · Hold (side view)",
+      },
+    ],
+  },
+  "knee-to-chest": {
+    slug: "One_Knee_To_Chest",
+    youtube: "o8gAyDUh2bs",
+    steps: [
+      {
+        src: dbPhoto("One_Knee_To_Chest", 0),
+        label: "1 · Lie on back",
+      },
+      {
+        src: dbPhoto("One_Knee_To_Chest", 1),
+        label: "2 · One knee",
+      },
+      {
+        src: dbPhoto("Hug_Knees_To_Chest", 1),
+        label: "3 · Both knees",
+      },
+    ],
   },
 };
 
 export function photoUrl(slug: string, frame: 0 | 1) {
-  return `${PHOTO}/${slug}/${frame}.jpg`;
+  return dbPhoto(slug, frame);
+}
+
+export function mediaStartSrc(media: ExerciseMedia) {
+  const steps = mediaSteps(media);
+  return steps[0]?.src ?? photoUrl(media.slug, 0);
+}
+
+export function mediaFinishSrc(media: ExerciseMedia) {
+  const steps = mediaSteps(media);
+  return steps[steps.length - 1]?.src ?? photoUrl(media.slug, 1);
+}
+
+export function mediaSteps(media: ExerciseMedia): MediaStep[] {
+  if (media.steps && media.steps.length > 0) return media.steps;
+  const start =
+    media.start ??
+    photoUrl(
+      media.startSlug ?? media.slug,
+      media.startFrame ?? media.frames?.start ?? 0,
+    );
+  const finish =
+    media.finish ??
+    photoUrl(
+      media.finishSlug ?? media.slug,
+      media.finishFrame ?? media.frames?.finish ?? 1,
+    );
+  return [
+    { src: start, label: "Start" },
+    { src: finish, label: "Finish" },
+  ];
 }
 
 export function youtubeThumb(id: string) {

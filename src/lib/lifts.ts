@@ -1,9 +1,16 @@
 import { cardioUnits, warmupById } from "@/data/warmup";
+import { stretchExercises } from "@/data/stretches";
 import { resolveExercise } from "@/lib/exercises";
 import type { AthleteDoc, LiftPoint, LoggedSet, WorkoutSession } from "@/lib/types";
 
 const MAX_TOTAL = 320;
 const MAX_PER_LIFT = 20;
+
+const STRETCH_IDS = new Set(stretchExercises().map((exercise) => exercise.id));
+
+export function isStretchExercise(exerciseId: string) {
+  return STRETCH_IDS.has(exerciseId);
+}
 
 export function liftUnit(exerciseId: string, athlete: AthleteDoc) {
   const preset = warmupById(exerciseId);
@@ -131,6 +138,7 @@ function groupLiftPoints(athlete: AthleteDoc, kind: "work" | "warmup") {
   const groups = new Map<string, LiftPoint[]>();
   for (const point of inferredLiftLog(athlete)) {
     if ((point.kind ?? "work") !== kind) continue;
+    if (isStretchExercise(point.exerciseId)) continue;
     const bucket = groups.get(point.exerciseId) ?? [];
     bucket.push(point);
     groups.set(point.exerciseId, bucket);
@@ -164,6 +172,37 @@ export function warmupsByExercise(athlete: AthleteDoc) {
   return groupLiftPoints(athlete, "warmup");
 }
 
+/** Stretch holds / reps tracked separately from strength lifts. */
+export function stretchesByExercise(athlete: AthleteDoc) {
+  const groups = new Map<string, LiftPoint[]>();
+  for (const point of inferredLiftLog(athlete)) {
+    if ((point.kind ?? "work") !== "work") continue;
+    if (!isStretchExercise(point.exerciseId)) continue;
+    const bucket = groups.get(point.exerciseId) ?? [];
+    bucket.push(point);
+    groups.set(point.exerciseId, bucket);
+  }
+  return [...groups.entries()]
+    .map(([exerciseId, points]) => {
+      const chronological = [...points].sort((a, b) => a.date.localeCompare(b.date));
+      const last = chronological[chronological.length - 1];
+      const previous = chronological[chronological.length - 2];
+      const exercise = resolveExercise(exerciseId, athlete);
+      return {
+        exerciseId,
+        name: exercise.name,
+        group: exercise.group,
+        unit: last.unit ?? "kg",
+        kind: "work" as const,
+        last,
+        previous,
+        delta: previous ? Number((last.weight - previous.weight).toFixed(1)) : null,
+        points: chronological,
+      };
+    })
+    .sort((a, b) => b.last.date.localeCompare(a.last.date) || a.name.localeCompare(b.name));
+}
+
 export function formatLiftPoint(point: LiftPoint) {
   if (point.unit === "min") return `${point.weight} min`;
   if (point.weight === 0) {
@@ -171,4 +210,17 @@ export function formatLiftPoint(point: LiftPoint) {
   }
   if (point.reps) return `${point.weight} ${point.unit ?? "kg"} × ${point.reps}`;
   return `${point.weight} ${point.unit ?? "kg"}`;
+}
+
+export function pointsForExercise(
+  athlete: AthleteDoc,
+  exerciseId: string,
+  kind: "work" | "warmup" = "work",
+) {
+  return inferredLiftLog(athlete)
+    .filter(
+      (point) =>
+        point.exerciseId === exerciseId && (point.kind ?? "work") === kind,
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

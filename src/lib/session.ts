@@ -1,5 +1,6 @@
 import { upsertBikeStats } from "@/lib/bike";
 import { mergeLiftLog } from "@/lib/lifts";
+import { sameSessionOccurrence, sessionDocId } from "@/lib/session-id";
 import { spanMs } from "@/lib/session-timer";
 import { ATHLETE_NAME } from "@/data/program";
 import { currentTimeOfDay, formatDateISO } from "@/lib/dates";
@@ -15,6 +16,16 @@ import type {
   SessionSummary,
   WorkoutSession,
 } from "@/lib/types";
+
+export { sessionDocId, sameSessionOccurrence } from "@/lib/session-id";
+
+export function isTrainingDay(dayId: DayKind | string) {
+  return dayId !== "stretch" && dayId !== "warmup" && dayId !== "rest";
+}
+
+export function isStretchDay(dayId: DayKind | string) {
+  return dayId === "stretch";
+}
 
 export function emptyFeeling() {
   return { energy: 3, sleep: 3, soreness: 2, notes: "" };
@@ -97,6 +108,19 @@ export function canReopenSession(
   return now - sessionClosedAt(session) <= SESSION_REOPEN_MS;
 }
 
+/** Reopen from Progress recent list using finishedAt/startedAt on the summary. */
+export function canReopenSummary(
+  summary?: SessionSummary | null,
+  now = Date.now(),
+) {
+  if (!summary?.startedAt) return false;
+  const closed = new Date(
+    summary.finishedAt ?? summary.startedAt,
+  ).getTime();
+  if (!Number.isFinite(closed)) return false;
+  return now - closed <= SESSION_REOPEN_MS;
+}
+
 export function isLiveSession(
   session?: WorkoutSession | null,
   today = formatDateISO(),
@@ -129,19 +153,26 @@ export function applyReopenedSession(
   athlete: AthleteDoc,
   session: WorkoutSession,
 ): AthleteDoc {
-  const wasLogged = athlete.recent.some(
-    (item) => item.date === session.date && item.dayId === session.dayId,
+  const wasLogged = athlete.recent.some((item) =>
+    sameSessionOccurrence(item, session),
   );
+  const stretchCount = athlete.stretchSessionsCompleted ?? 0;
   return {
     ...athlete,
     lastSessionDate: session.date,
+    lastSessionId: sessionDocId(session),
     lastSessionStatus: "in_progress",
     recent: athlete.recent.filter(
-      (item) => !(item.date === session.date && item.dayId === session.dayId),
+      (item) => !sameSessionOccurrence(item, session),
     ),
-    sessionsCompleted: wasLogged
-      ? Math.max(0, athlete.sessionsCompleted - 1)
-      : athlete.sessionsCompleted,
+    sessionsCompleted:
+      wasLogged && isTrainingDay(session.dayId)
+        ? Math.max(0, athlete.sessionsCompleted - 1)
+        : athlete.sessionsCompleted,
+    stretchSessionsCompleted:
+      wasLogged && isStretchDay(session.dayId)
+        ? Math.max(0, stretchCount - 1)
+        : stretchCount,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -183,6 +214,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     timezone: "Europe/Stockholm",
     programStartDate: startDate,
     lastSessionDate: null,
+    lastSessionId: null,
     lastSessionStatus: null,
     lastByDay: {},
     lastLoads: {},
@@ -194,6 +226,7 @@ export function createAthlete(startDate = formatDateISO()): AthleteDoc {
     prs: {},
     recent: [],
     sessionsCompleted: 0,
+    stretchSessionsCompleted: 0,
     streak: 0,
     updatedAt: new Date().toISOString(),
   };
@@ -274,6 +307,8 @@ export function summarizeSession(session: WorkoutSession): SessionSummary {
     plannedSets,
     mood: session.feelingAfter?.mood,
     pump: session.feelingAfter?.pump,
+    startedAt: session.startedAt,
+    finishedAt: session.finishedAt ?? session.clockEndedAt,
   };
 }
 
@@ -333,6 +368,7 @@ export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
     {
       ...athlete,
       lastSessionDate: session.date,
+      lastSessionId: sessionDocId(session),
       lastSessionStatus: session.status,
       lastByDay: {
         ...athlete.lastByDay,
@@ -353,7 +389,13 @@ export function rememberProgress(athlete: AthleteDoc, session: WorkoutSession) {
 
 export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSession) {
   const prs: Record<string, PersonalRecord> = { ...athlete.prs };
-  if (session.dayId !== "warmup" && session.dayId !== "stretch") {
+  const loggedWorkExercises = session.exercises.filter((exercise) =>
+    workingSets(exercise.sets).some(
+      (set) => set.done && set.weight != null && set.weight > 0 && set.reps,
+    ),
+  ).length;
+  // PRs only from real training days with at least two loaded lifts logged.
+  if (isTrainingDay(session.dayId) && loggedWorkExercises >= 2) {
     for (const exercise of session.exercises) {
       for (const set of workingSets(exercise.sets)) {
         if (!set.done || !set.weight || !set.reps) continue;
@@ -376,28 +418,33 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
   const summary = summarizeSession(session);
   const recent = [
     summary,
-    ...athlete.recent.filter(
-      (item) => !(item.date === session.date && item.dayId === session.dayId),
-    ),
-  ].slice(0, 12);
+    ...athlete.recent.filter((item) => !sameSessionOccurrence(item, session)),
+  ].slice(0, 20);
 
-  const alreadyToday = athlete.recent.some(
-    (item) => item.date === session.date && item.dayId === session.dayId,
+  const alreadyLogged = athlete.recent.some((item) =>
+    sameSessionOccurrence(item, session),
   );
-  const lastDate = athlete.lastSessionDate;
+  const training = isTrainingDay(session.dayId);
+  const stretch = isStretchDay(session.dayId);
+  const lastTrainingDate = athlete.recent.find(
+    (item) =>
+      isTrainingDay(item.dayId) && !sameSessionOccurrence(item, session),
+  )?.date;
   const streak =
-    session.status === "completed"
-      ? lastDate && isNextCalendarDay(lastDate, session.date)
+    session.status === "completed" && training
+      ? lastTrainingDate && isNextCalendarDay(lastTrainingDate, session.date)
         ? athlete.streak + 1
-        : lastDate === session.date
+        : lastTrainingDate === session.date
           ? athlete.streak
           : 1
       : athlete.streak;
 
+  const stretchCount = athlete.stretchSessionsCompleted ?? 0;
   const completed = mergeLiftLog(
     {
       ...athlete,
       lastSessionDate: session.date,
+      lastSessionId: sessionDocId(session),
       lastSessionStatus: session.status,
       lastByDay: {
         ...athlete.lastByDay,
@@ -410,9 +457,13 @@ export function applyCompletedSession(athlete: AthleteDoc, session: WorkoutSessi
       prs,
       recent,
       sessionsCompleted:
-        session.status === "completed" && !alreadyToday
+        session.status === "completed" && training && !alreadyLogged
           ? athlete.sessionsCompleted + 1
           : athlete.sessionsCompleted,
+      stretchSessionsCompleted:
+        session.status === "completed" && stretch && !alreadyLogged
+          ? stretchCount + 1
+          : stretchCount,
       streak,
       updatedAt: new Date().toISOString(),
     },

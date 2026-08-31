@@ -13,6 +13,7 @@ import { formatDateISO } from "@/lib/dates";
 import { upsertBikeStats } from "@/lib/bike";
 import { mergeLiftLog } from "@/lib/lifts";
 import { createAthlete, isLiveSession, mergeLoads } from "@/lib/session";
+import { sessionDocId } from "@/lib/session-id";
 import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, saveReopened, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
 
@@ -95,6 +96,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         {
           ...base,
           lastSessionDate: session.date,
+          lastSessionId: sessionDocId(session),
           lastSessionStatus: session.status,
           lastLoads: mergeLoads(base.lastLoads, session),
           updatedAt: session.updatedAt,

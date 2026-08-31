@@ -91,8 +91,8 @@ export const STRETCH_EXERCISES: Exercise[] = [
     equipment: "Floor / mat",
     bodyweight: true,
     setup:
-      "Kneel with the knees wide and the big toes together behind you. Sit the hips back toward the heels.",
-    how: "Fold the torso forward and reach the arms long in front. Rest the forehead on the ground (or a fist/block). Soften the shoulders and breathe into the back. Hold about one minute.",
+      "Kneel on a mat. Big toes can touch behind you; let the knees open so the belly has room. Sit the hips back toward the heels.",
+    how: "Fold the torso forward until the forehead rests on the mat (or a fist/block). Then walk the hands forward and reach the arms long. Soften the shoulders and breathe into the back. Hold about one minute.",
     mistakes: "Forcing the hips to the heels if the knees complain, or holding the breath.",
     progress: "Widen the knees or walk the hands farther to settle deeper.",
   },

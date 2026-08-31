@@ -6,10 +6,10 @@ rules_version = '2';
 // Document ID: 64-char sha256 hex of (passphrase + server salt)
 // Fields: name, timezone, programStartDate, lastSessionDate,
 //   lastSessionStatus, lastByDay, customExercises, pinnedByDay, prs, recent, sessionsCompleted,
-//   streak, updatedAt
+//   streak, stretchSessionsCompleted, updatedAt
 //
 // Collection: athletes/{id}/sessions
-// Document ID: YYYY-MM-DD
+// Document ID: YYYY-MM-DD__dayId__sessionStartedAt (legacy: YYYY-MM-DD)
 // Fields: date, dayId, title, status, startedAt, finishedAt,
 //   timeOfDay, feelingBefore, feelingAfter, exercises, updatedAt
 //

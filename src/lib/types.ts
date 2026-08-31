@@ -156,6 +156,9 @@ export type SessionSummary = {
   plannedSets: number;
   mood?: number;
   pump?: number;
+  /** When the session clock started — distinguishes multiple sessions the same day. */
+  startedAt?: string;
+  finishedAt?: string;
 };
 
 export type PersonalRecord = {
@@ -200,6 +203,8 @@ export type AthleteDoc = {
   timezone: string;
   programStartDate: string;
   lastSessionDate: string | null;
+  /** Firestore sessions/{id} for the latest open or finished session. */
+  lastSessionId?: string | null;
   lastSessionStatus: WorkoutSession["status"] | null;
   lastByDay: Partial<Record<DayKind, { date: string; sets: LastSets }>>;
   lastLoads?: Record<string, LastLoad>;
@@ -211,6 +216,8 @@ export type AthleteDoc = {
   prs: Record<string, PersonalRecord>;
   recent: SessionSummary[];
   sessionsCompleted: number;
+  /** Completed Stretch · mobility sessions (not counted in sessionsCompleted). */
+  stretchSessionsCompleted?: number;
   streak: number;
   updatedAt: string;
 };

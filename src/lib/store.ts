@@ -122,3 +122,11 @@ export function abandonSession(
   void saveNow(bundle);
   return bundle;
 }
+
+export async function fetchSession(sessionId: string) {
+  const response = await fetch(`/api/session?id=${encodeURIComponent(sessionId)}`);
+  if (response.status === 401 || response.status === 404) return null;
+  if (!response.ok) return null;
+  const body = (await response.json()) as { session?: WorkoutSession };
+  return body.session ?? null;
+}
