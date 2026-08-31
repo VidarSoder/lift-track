@@ -6,6 +6,7 @@ import { useTraining } from "@/components/training-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatNiceDate } from "@/lib/dates";
 import { liftsByExercise, stretchesByExercise } from "@/lib/lifts";
+import { displaySessionCounts } from "@/lib/session";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 
 export function SettingsView() {
@@ -15,7 +16,7 @@ export function SettingsView() {
   const delta = weightDelta(athlete);
   const lifts = liftsByExercise(athlete);
   const stretches = stretchesByExercise(athlete);
-  const stretchSessions = athlete.stretchSessionsCompleted ?? 0;
+  const sessionCounts = displaySessionCounts(athlete);
 
   return (
     <div className="space-y-5 pb-4">
@@ -94,9 +95,9 @@ export function SettingsView() {
               <div className="min-w-0">
                 <p className="text-base font-medium">Sessions</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {athlete.sessionsCompleted} training
-                  {stretchSessions > 0
-                    ? ` · ${stretchSessions} stretch`
+                  {sessionCounts.training} training
+                  {sessionCounts.stretch > 0
+                    ? ` · ${sessionCounts.stretch} stretch`
                     : ""}
                 </p>
               </div>

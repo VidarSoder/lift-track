@@ -1,18 +1,75 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { BackLink } from "@/components/back-link";
+import { SessionTimeline } from "@/components/session-timeline";
 import { useTraining } from "@/components/training-provider";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatNiceDate } from "@/lib/dates";
-import { isStretchDay, isTrainingDay } from "@/lib/session";
-import { sessionDocIdFromSummary } from "@/lib/session-id";
+import {
+  canReopenSession,
+  displaySessionCounts,
+  isStretchDay,
+} from "@/lib/session";
+import {
+  sessionDocId,
+  sessionDocIdCandidates,
+  sessionDocIdFromSummary,
+} from "@/lib/session-id";
+import { fetchSession } from "@/lib/store";
+import type { SessionSummary } from "@/lib/types";
 
 export function SessionsSettingsView() {
-  const { athlete } = useTraining();
-  const training = athlete.recent.filter((item) => isTrainingDay(item.dayId));
-  const stretches = athlete.recent.filter((item) => isStretchDay(item.dayId));
+  const router = useRouter();
+  const { athlete, todaySession, reopenEndedSession } = useTraining();
+  const sessionCounts = displaySessionCounts(athlete);
+
+  async function reopenSummary(summary: SessionSummary) {
+    const matchToday =
+      todaySession &&
+      todaySession.date === summary.date &&
+      todaySession.dayId === summary.dayId &&
+      (!summary.startedAt || todaySession.startedAt === summary.startedAt) &&
+      canReopenSession(todaySession);
+
+    if (matchToday && todaySession) {
+      reopenEndedSession(todaySession);
+      router.push("/workout");
+      return;
+    }
+
+    for (const docId of sessionDocIdCandidates(summary)) {
+      const remote = await fetchSession(docId);
+      if (!remote) continue;
+      if (remote.dayId !== summary.dayId) continue;
+      if (
+        summary.startedAt &&
+        remote.startedAt &&
+        remote.startedAt !== summary.startedAt
+      ) {
+        continue;
+      }
+      if (!canReopenSession(remote)) {
+        toast.message("That session is past the 24-hour reopen window.");
+        return;
+      }
+      reopenEndedSession(remote);
+      router.push("/workout");
+      return;
+    }
+
+    toast.error("Couldn’t find that session to reopen.");
+  }
+
+  function sessionHref(summary: SessionSummary) {
+    const docId = sessionDocIdFromSummary(summary);
+    if (docId) return `/progress/session?id=${encodeURIComponent(docId)}`;
+    if (todaySession && todaySession.date === summary.date) {
+      return `/progress/session?id=${encodeURIComponent(sessionDocId(todaySession))}`;
+    }
+    return `/progress/session?id=${encodeURIComponent(summary.date)}`;
+  }
 
   return (
     <div className="space-y-5 pb-4">
@@ -23,8 +80,8 @@ export function SessionsSettingsView() {
         </p>
         <h1 className="mt-2 font-heading text-3xl leading-none">Sessions</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Training and stretch sessions stay separate. Open any for the set
-          timeline.
+          Training and stretch stay separate. Scroll the timeline for photos and
+          badges.
         </p>
       </header>
 
@@ -32,85 +89,36 @@ export function SessionsSettingsView() {
         <Card>
           <CardContent className="pt-4">
             <p className="text-[11px] text-muted-foreground">Training</p>
-            <p className="text-2xl font-semibold">{athlete.sessionsCompleted}</p>
+            <p className="text-2xl font-semibold">{sessionCounts.training}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <p className="text-[11px] text-muted-foreground">Stretch</p>
-            <p className="text-2xl font-semibold">
-              {athlete.stretchSessionsCompleted ?? 0}
-            </p>
+            <p className="text-2xl font-semibold">{sessionCounts.stretch}</p>
           </CardContent>
         </Card>
       </div>
 
-      <section className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Training
-        </p>
-        {training.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No training sessions yet.</p>
-        ) : (
-          training.map((item, index) => {
-            const docId = sessionDocIdFromSummary(item);
-            const href = docId
-              ? `/progress/session?id=${encodeURIComponent(docId)}`
-              : `/progress/session?id=${encodeURIComponent(item.date)}`;
-            return (
-              <Link key={`${item.date}-${item.startedAt ?? index}`} href={href} className="block">
-                <Card className="transition-colors hover:bg-muted/30">
-                  <CardContent className="flex items-center justify-between gap-3 pt-4 pb-4">
-                    <div className="min-w-0">
-                      <p className="font-medium leading-tight">
-                        {item.title.split("·")[0].trim()}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatNiceDate(item.date)} · {item.durationMin} min
-                        {item.volume > 0 ? ` · ${item.volume} kg` : ""}
-                      </p>
-                    </div>
-                    <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })
-        )}
-      </section>
+      <SessionTimeline
+        athlete={athlete}
+        sessionHref={sessionHref}
+        onReopen={(summary) => void reopenSummary(summary)}
+      />
 
-      <section className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Stretch sessions
+      {athlete.recent.some((item) => isStretchDay(item.dayId)) ? (
+        <p className="text-center text-xs text-muted-foreground">
+          Stretch events use the mint rail dots so they read apart from lifting.
         </p>
-        {stretches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No stretch sessions yet.</p>
-        ) : (
-          stretches.map((item, index) => {
-            const docId = sessionDocIdFromSummary(item);
-            const href = docId
-              ? `/progress/session?id=${encodeURIComponent(docId)}`
-              : `/progress/session?id=${encodeURIComponent(item.date)}`;
-            return (
-              <Link key={`st-${item.date}-${item.startedAt ?? index}`} href={href} className="block">
-                <Card className="transition-colors hover:bg-muted/30">
-                  <CardContent className="flex items-center justify-between gap-3 pt-4 pb-4">
-                    <div className="min-w-0">
-                      <p className="font-medium leading-tight">
-                        {item.title.split("·")[0].trim()}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatNiceDate(item.date)} · {item.durationMin} min
-                      </p>
-                    </div>
-                    <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })
-        )}
-      </section>
+      ) : null}
+
+      <p className="text-center text-xs text-muted-foreground">
+        Prefer the set-by-set view? Open any card, or go via{" "}
+        <Link href="/progress" className="font-medium text-primary underline">
+          Progress
+        </Link>
+        .
+      </p>
     </div>
   );
 }

@@ -1,5 +1,9 @@
 import { formatDateISO } from "@/lib/dates";
-import { createAthlete, isLiveSession } from "@/lib/session";
+import {
+  countSessionsFromDocs,
+  createAthlete,
+  isLiveSession,
+} from "@/lib/session";
 import { sessionDocId } from "@/lib/session-id";
 import { setLogDocId, setLogEntriesFromSession } from "@/lib/set-logs";
 import { athleteId } from "@/lib/server/secrets";
@@ -16,26 +20,60 @@ export async function loadTrainingState(): Promise<CacheBundle> {
   const db = adminDb();
   const athleteRef = db.collection("athletes").doc(id);
   const snap = await athleteRef.get();
-  const athlete = snap.exists ? (snap.data() as AthleteDoc) : createAthlete(today);
+  let athlete = snap.exists ? (snap.data() as AthleteDoc) : createAthlete(today);
 
   let todaySession: WorkoutSession | undefined;
   const sessions = athleteRef.collection("sessions");
 
-  // Prefer explicit multi-session id; fall back to legacy sessions/{date}.
-  const candidates = [
-    athlete.lastSessionId,
-    athlete.lastSessionDate && DATE.test(athlete.lastSessionDate)
-      ? athlete.lastSessionDate
-      : null,
-  ].filter((value): value is string => Boolean(value));
+  // Source of truth for cards: count completed docs (training vs stretch).
+  const allSessions = await sessions.get();
+  if (!allSessions.empty) {
+    const counted = countSessionsFromDocs(
+      allSessions.docs.map((doc) => doc.data() as WorkoutSession),
+    );
+    if (
+      counted.training !== athlete.sessionsCompleted ||
+      counted.stretch !== (athlete.stretchSessionsCompleted ?? 0)
+    ) {
+      athlete = {
+        ...athlete,
+        sessionsCompleted: counted.training,
+        stretchSessionsCompleted: counted.stretch,
+        updatedAt: new Date().toISOString(),
+      };
+      await athleteRef.set(
+        {
+          sessionsCompleted: counted.training,
+          stretchSessionsCompleted: counted.stretch,
+          updatedAt: athlete.updatedAt,
+        },
+        { merge: true },
+      );
+    }
+  }
 
-  for (const docId of candidates) {
-    const sessionSnap = await sessions.doc(docId).get();
-    if (!sessionSnap.exists) continue;
-    const session = sessionSnap.data() as WorkoutSession;
-    if (isLiveSession(session, today)) {
-      todaySession = session;
-      break;
+  // Prefer in-progress, else lastSessionId, else legacy sessions/{date}.
+  const inProgress = allSessions.docs
+    .map((doc) => doc.data() as WorkoutSession)
+    .find((session) => session.status === "in_progress" && isLiveSession(session, today));
+  if (inProgress) {
+    todaySession = inProgress;
+  } else {
+    const candidates = [
+      athlete.lastSessionId,
+      athlete.lastSessionDate && DATE.test(athlete.lastSessionDate)
+        ? athlete.lastSessionDate
+        : null,
+    ].filter((value): value is string => Boolean(value));
+
+    for (const docId of candidates) {
+      const sessionSnap = await sessions.doc(docId).get();
+      if (!sessionSnap.exists) continue;
+      const session = sessionSnap.data() as WorkoutSession;
+      if (isLiveSession(session, today)) {
+        todaySession = session;
+        break;
+      }
     }
   }
 

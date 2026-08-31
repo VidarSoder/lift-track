@@ -164,6 +164,15 @@
   }
 }
 
+@keyframes timeline-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
 .loader-ring {
   animation: loader-spin 1.15s linear infinite;
 }

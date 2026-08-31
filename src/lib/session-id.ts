@@ -17,6 +17,15 @@ export function sessionDocIdFromSummary(summary: SessionSummary) {
   });
 }
 
+/** Try composite id first, then legacy sessions/{date}. */
+export function sessionDocIdCandidates(summary: SessionSummary) {
+  const ids: string[] = [];
+  const composite = sessionDocIdFromSummary(summary);
+  if (composite) ids.push(composite);
+  if (!ids.includes(summary.date)) ids.push(summary.date);
+  return ids;
+}
+
 /** Match the same workout occurrence (multi-session days need startedAt). */
 export function sameSessionOccurrence(
   a: { date: string; dayId: DayKind | string; startedAt?: string },

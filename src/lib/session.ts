@@ -113,12 +113,81 @@ export function canReopenSummary(
   summary?: SessionSummary | null,
   now = Date.now(),
 ) {
-  if (!summary?.startedAt) return false;
+  if (!summary) return false;
   const closed = new Date(
-    summary.finishedAt ?? summary.startedAt,
+    summary.finishedAt ??
+      summary.startedAt ??
+      `${summary.date}T12:00:00`,
   ).getTime();
   if (!Number.isFinite(closed)) return false;
   return now - closed <= SESSION_REOPEN_MS;
+}
+
+/** Training vs stretch totals for cards — prefers recent when it covers the log. */
+export function displaySessionCounts(athlete: AthleteDoc) {
+  const recentTraining = athlete.recent.filter((item) =>
+    isTrainingDay(item.dayId),
+  ).length;
+  const recentStretch = athlete.recent.filter((item) =>
+    isStretchDay(item.dayId),
+  ).length;
+  const recentTotal = recentTraining + recentStretch;
+  const stretchStored = athlete.stretchSessionsCompleted ?? 0;
+  const trainingStored = athlete.sessionsCompleted;
+  const storedTotal = trainingStored + stretchStored;
+
+  // Recent still holds every completed session (or more, after a reopen).
+  if (recentTotal >= storedTotal && recentTotal > 0) {
+    return { training: recentTraining, stretch: recentStretch };
+  }
+
+  // Stretch used to inflate sessionsCompleted — peel those off when stored stretch lags.
+  const stretch = Math.max(stretchStored, recentStretch);
+  const stretchDelta = Math.max(0, stretch - stretchStored);
+  const training = Math.max(0, trainingStored - stretchDelta);
+  return { training, stretch };
+}
+
+/** Persist corrected counters onto the athlete doc. */
+export function withReconciledSessionCounts(athlete: AthleteDoc): AthleteDoc {
+  const { training, stretch } = displaySessionCounts(athlete);
+  if (
+    athlete.sessionsCompleted === training &&
+    (athlete.stretchSessionsCompleted ?? 0) === stretch
+  ) {
+    return athlete;
+  }
+  return {
+    ...athlete,
+    sessionsCompleted: training,
+    stretchSessionsCompleted: stretch,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function countSessionsFromDocs(
+  sessions: Array<Pick<WorkoutSession, "status" | "dayId" | "date" | "startedAt">>,
+) {
+  const completed = sessions.filter((session) => session.status === "completed");
+  const withStart = completed.filter((session) => session.startedAt);
+  const withoutStart = completed.filter((session) => !session.startedAt);
+  const dayKeys = new Set(
+    withStart.map((session) => `${session.date}|${session.dayId}`),
+  );
+
+  let training = 0;
+  let stretch = 0;
+  const add = (session: (typeof completed)[number]) => {
+    if (isStretchDay(session.dayId)) stretch += 1;
+    else if (isTrainingDay(session.dayId)) training += 1;
+  };
+  for (const session of withStart) add(session);
+  // Skip legacy date-only docs when a multi-session id already covers that day+kind.
+  for (const session of withoutStart) {
+    if (dayKeys.has(`${session.date}|${session.dayId}`)) continue;
+    add(session);
+  }
+  return { training, stretch };
 }
 
 export function isLiveSession(

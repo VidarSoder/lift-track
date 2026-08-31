@@ -12,7 +12,7 @@ import { hasUnlockFlag, persistUnlock } from "@/lib/auth";
 import { formatDateISO } from "@/lib/dates";
 import { upsertBikeStats } from "@/lib/bike";
 import { mergeLiftLog } from "@/lib/lifts";
-import { createAthlete, isLiveSession, mergeLoads } from "@/lib/session";
+import { createAthlete, isLiveSession, mergeLoads, withReconciledSessionCounts } from "@/lib/session";
 import { sessionDocId } from "@/lib/session-id";
 import { abandonSession, loadBundle, queueSave, saveCompleted, saveNow, saveProgress, saveReopened, unlockWithPassphrase } from "@/lib/store";
 import type { AthleteDoc, WorkoutSession } from "@/lib/types";
@@ -64,10 +64,18 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
         return;
       }
-      setAthleteState(bundle.athlete);
+      const next = withReconciledSessionCounts(bundle.athlete);
+      setAthleteState(next);
       setTodaySessionState(hydrateToday(bundle.today));
       setUnlocked(true);
       setReady(true);
+      if (
+        next.sessionsCompleted !== bundle.athlete.sessionsCompleted ||
+        (next.stretchSessionsCompleted ?? 0) !==
+          (bundle.athlete.stretchSessionsCompleted ?? 0)
+      ) {
+        void saveNow({ athlete: next, today: bundle.today });
+      }
     }
     void boot();
     return () => {
@@ -79,9 +87,17 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     const bundle = await unlockWithPassphrase(value);
     if (!bundle) return false;
     persistUnlock();
-    setAthleteState(bundle.athlete);
+    const next = withReconciledSessionCounts(bundle.athlete);
+    setAthleteState(next);
     setTodaySessionState(hydrateToday(bundle.today));
     setUnlocked(true);
+    if (
+      next.sessionsCompleted !== bundle.athlete.sessionsCompleted ||
+      (next.stretchSessionsCompleted ?? 0) !==
+        (bundle.athlete.stretchSessionsCompleted ?? 0)
+    ) {
+      void saveNow({ athlete: next, today: bundle.today });
+    }
     return true;
   }, []);
 
@@ -154,8 +170,16 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   const reload = useCallback(async () => {
     const bundle = await loadBundle();
     if (!bundle) return;
-    setAthleteState(bundle.athlete);
+    const next = withReconciledSessionCounts(bundle.athlete);
+    setAthleteState(next);
     setTodaySessionState(hydrateToday(bundle.today));
+    if (
+      next.sessionsCompleted !== bundle.athlete.sessionsCompleted ||
+      (next.stretchSessionsCompleted ?? 0) !==
+        (bundle.athlete.stretchSessionsCompleted ?? 0)
+    ) {
+      void saveNow({ athlete: next, today: bundle.today });
+    }
   }, []);
 
   const setAthlete = useCallback(

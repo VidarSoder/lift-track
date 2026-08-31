@@ -77,10 +77,10 @@ export function TodayView() {
             </Link>
             {finishedToday && todaySession ? (
               <p className="text-xs leading-5 text-muted-foreground">
-                Already finished {todaySession.title.split("·")[0].trim()} today.
-                Start something new above, or{" "}
+                Latest finish today: {todaySession.title.split("·")[0].trim()}.
+                Start something new above, or reopen any of today’s sessions on{" "}
                 <Link href="/progress" className="font-medium text-primary underline">
-                  reopen it on Progress
+                  Progress
                 </Link>
                 .
               </p>

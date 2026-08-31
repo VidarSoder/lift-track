@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { CloseButton } from "@/components/close-button";
 import { bikeDelta, bikeLog, formatBikeLine, latestBike } from "@/lib/bike";
 import { formatDateISO, formatNiceDate } from "@/lib/dates";
@@ -18,26 +19,23 @@ import { resolveExercise } from "@/lib/exercises";
 import {
   canReopenSession,
   canReopenSummary,
+  displaySessionCounts,
   isStretchDay,
+  isTrainingDay,
 } from "@/lib/session";
-import { sessionDocId, sessionDocIdFromSummary } from "@/lib/session-id";
+import {
+  sessionDocIdCandidates,
+  sessionDocIdFromSummary,
+} from "@/lib/session-id";
 import { fetchSession } from "@/lib/store";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 import type { SessionSummary } from "@/lib/types";
 import { TrendChart, WeightChart } from "@/components/weight-chart";
+import { SessionTimeline } from "@/components/session-timeline";
 import { useTraining } from "@/components/training-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-function Bar({ value, max }: { value: number; max: number }) {
-  const width = max === 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
-  return (
-    <div className="h-2 overflow-hidden rounded-full bg-secondary">
-      <div className="h-full bg-primary" style={{ width: `${width}%` }} />
-    </div>
-  );
-}
 
 function Spark({ points }: { points: { weight: number }[] }) {
   const values = points.map((point) => point.weight);
@@ -66,6 +64,7 @@ export function ProgressView() {
   const [group, setGroup] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [liftKind, setLiftKind] = useState<"work" | "warmup">("work");
+  const [sessionAxis, setSessionAxis] = useState<"kg" | "sets">("kg");
   const body = latestWeight(athlete);
   const weighIns = weightLog(athlete);
   const delta = weightDelta(athlete);
@@ -76,7 +75,11 @@ export function ProgressView() {
     1,
     ...bikes.map((item) => item.km ?? item.minutes / 10),
   );
-  const maxVolume = Math.max(1, ...athlete.recent.map((item) => item.volume));
+  const sessionCounts = useMemo(() => displaySessionCounts(athlete), [athlete]);
+  const trainingRecent = useMemo(
+    () => athlete.recent.filter((item) => isTrainingDay(item.dayId)),
+    [athlete.recent],
+  );
   const lifts = useMemo(() => liftsByExercise(athlete), [athlete]);
   const stretches = useMemo(() => stretchesByExercise(athlete), [athlete]);
   const warmups = useMemo(() => warmupsByExercise(athlete), [athlete]);
@@ -86,8 +89,16 @@ export function ProgressView() {
   );
   const visible = lifts.filter((item) => group === "all" || item.group === group);
   const today = formatDateISO();
+  const todaySummaries = athlete.recent.filter((item) => item.date === today);
   const latest = athlete.recent[0];
   const latestIsToday = latest?.date === today;
+  const sessionTrend = useMemo(() => {
+    const chronological = [...trainingRecent].reverse();
+    return chronological.map((item, index) => ({
+      date: item.startedAt?.slice(0, 10) ?? `${item.date}-${index}`,
+      value: sessionAxis === "kg" ? item.volume : item.completedSets,
+    }));
+  }, [trainingRecent, sessionAxis]);
   const namedPrs = Object.entries(athlete.prs)
     .map(([id, pr]) => {
       const exercise = resolveExercise(id, athlete);
@@ -97,23 +108,45 @@ export function ProgressView() {
     .slice(0, 8);
 
   async function reopenSummary(summary: SessionSummary) {
-    const docId = sessionDocIdFromSummary(summary);
-    if (!docId) return;
-    if (todaySession && sessionDocId(todaySession) === docId && canReopenSession(todaySession)) {
+    const matchToday =
+      todaySession &&
+      todaySession.date === summary.date &&
+      todaySession.dayId === summary.dayId &&
+      (!summary.startedAt || todaySession.startedAt === summary.startedAt) &&
+      canReopenSession(todaySession);
+
+    if (matchToday && todaySession) {
       reopenEndedSession(todaySession);
       router.push("/workout");
       return;
     }
-    const remote = await fetchSession(docId);
-    if (!remote || !canReopenSession(remote)) return;
-    reopenEndedSession(remote);
-    router.push("/workout");
+
+    for (const docId of sessionDocIdCandidates(summary)) {
+      const remote = await fetchSession(docId);
+      if (!remote) continue;
+      if (remote.dayId !== summary.dayId) continue;
+      if (
+        summary.startedAt &&
+        remote.startedAt &&
+        remote.startedAt !== summary.startedAt
+      ) {
+        continue;
+      }
+      if (!canReopenSession(remote)) {
+        toast.message("That session is past the 24-hour reopen window.");
+        return;
+      }
+      reopenEndedSession(remote);
+      router.push("/workout");
+      return;
+    }
+
+    toast.error("Couldn’t find that session to reopen.");
   }
 
   function sessionHref(summary: SessionSummary) {
     const docId = sessionDocIdFromSummary(summary);
     if (docId) return `/progress/session?id=${encodeURIComponent(docId)}`;
-    // Legacy recent row without startedAt — best-effort date doc.
     return `/progress/session?id=${encodeURIComponent(summary.date)}`;
   }
 
@@ -126,22 +159,69 @@ export function ProgressView() {
         <h1 className="mt-2 font-heading text-3xl leading-none">Progress</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {latestIsToday
-            ? "Today’s session is at the top. The lifts below keep the longer history."
+            ? "Today’s sessions sit at the top. Lifts below keep the longer history."
             : "Every set you save keeps a history for that lift. Filter to what you actually do and watch the load over time."}
         </p>
       </header>
 
-      {latest ? (
+      {todaySummaries.length > 0 ? (
+        <Card className="border-primary/25 bg-primary/8">
+          <CardContent className="space-y-4 pt-5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              Today · {todaySummaries.length} session
+              {todaySummaries.length === 1 ? "" : "s"}
+            </p>
+            {todaySummaries.map((item, index) => {
+              const reopen = canReopenSummary(item);
+              return (
+                <div
+                  key={`${item.dayId}-${item.startedAt ?? index}`}
+                  className="space-y-2 border-t border-primary/15 pt-3 first:border-t-0 first:pt-0"
+                >
+                  <Link href={sessionHref(item)} className="block">
+                    <p className="font-heading text-xl leading-none tracking-tight">
+                      {isStretchDay(item.dayId)
+                        ? "Stretch"
+                        : item.title.split("·")[0].trim()}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {item.durationMin} min · {item.completedSets}/
+                      {item.plannedSets} sets
+                      {item.volume > 0 ? ` · ${item.volume} kg` : ""}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-primary">
+                      Open timeline →
+                    </p>
+                  </Link>
+                  {reopen ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full"
+                      onClick={() => void reopenSummary(item)}
+                    >
+                      Reopen{" "}
+                      {isStretchDay(item.dayId)
+                        ? "stretch"
+                        : item.title.split("·")[0].trim()}
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
+            <p className="text-xs leading-5 text-muted-foreground">
+              Within 24 hours you can reopen any of today’s sessions, or start
+              another from Home / Workout.
+            </p>
+          </CardContent>
+        </Card>
+      ) : latest ? (
         <Card className="border-primary/25 bg-primary/8">
           <CardContent className="space-y-2 pt-5">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              {latestIsToday
-                ? isStretchDay(latest.dayId)
-                  ? "Today · stretch"
-                  : "Today"
-                : isStretchDay(latest.dayId)
-                  ? "Latest stretch session"
-                  : "Latest session"}
+              {isStretchDay(latest.dayId)
+                ? "Latest stretch session"
+                : "Latest session"}
             </p>
             <Link href={sessionHref(latest)} className="block">
               <p className="font-heading text-2xl leading-none tracking-tight">
@@ -152,12 +232,6 @@ export function ProgressView() {
                 {latest.completedSets}/{latest.plannedSets} sets
                 {latest.volume > 0 ? ` · ${latest.volume} kg` : ""}
               </p>
-              {latest.mood ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Mood {latest.mood}/5
-                  {latest.pump ? ` · pump ${latest.pump}/5` : ""}
-                </p>
-              ) : null}
               <p className="mt-2 text-xs font-medium text-primary">Open timeline →</p>
             </Link>
             {canReopenSummary(latest) ? (
@@ -170,10 +244,6 @@ export function ProgressView() {
                 >
                   Reopen session
                 </Button>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Within 24 hours you can reopen this one, or start another session
-                  from Home / Workout.
-                </p>
               </div>
             ) : null}
           </CardContent>
@@ -184,15 +254,13 @@ export function ProgressView() {
         <Card>
           <CardContent className="pt-4">
             <p className="text-[11px] text-muted-foreground">Sessions</p>
-            <p className="text-2xl font-semibold">{athlete.sessionsCompleted}</p>
+            <p className="text-2xl font-semibold">{sessionCounts.training}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <p className="text-[11px] text-muted-foreground">Stretch</p>
-            <p className="text-2xl font-semibold">
-              {athlete.stretchSessionsCompleted ?? 0}
-            </p>
+            <p className="text-2xl font-semibold">{sessionCounts.stretch}</p>
           </CardContent>
         </Card>
         <Card>
@@ -208,6 +276,60 @@ export function ProgressView() {
           </CardContent>
         </Card>
       </div>
+
+      {sessionTrend.length > 0 ? (
+        <Card>
+          <CardContent className="space-y-3 pt-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Training trend</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Volume and sets over time — stretch stays out of this chart.
+                </p>
+              </div>
+              <div className="grid shrink-0 grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
+                {(
+                  [
+                    ["kg", "kg"],
+                    ["sets", "Sets"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSessionAxis(id)}
+                    className={cn(
+                      "h-8 rounded-lg px-2.5 text-xs font-medium",
+                      sessionAxis === id
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {sessionTrend.length >= 2 ? (
+              <TrendChart
+                points={sessionTrend}
+                unit={sessionAxis === "kg" ? "kg" : "sets"}
+                decimals={0}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Finish one more training session to unlock the trend line.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <SessionTimeline
+        athlete={athlete}
+        sessionHref={sessionHref}
+        onReopen={(summary) => void reopenSummary(summary)}
+      />
 
       <Card>
         <CardContent className="space-y-3 pt-5">
@@ -536,69 +658,6 @@ export function ProgressView() {
               After a bike, type time, km, kcal, and level from the console.
               That history shows up here.
             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recent volume</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {athlete.recent.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Finish a session and the bar chart shows up here.
-            </p>
-          ) : (
-            athlete.recent.map((item, index) => {
-              const href = sessionHref(item);
-              const reopen = canReopenSummary(item);
-              return (
-                <div
-                  key={`${item.date}-${item.dayId}-${item.startedAt ?? index}`}
-                  className={cn("space-y-1", index === 0 && "rounded-xl bg-primary/8 p-2")}
-                >
-                  <Link href={href} className="block space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium">
-                        {index === 0 ? "Newest · " : ""}
-                        {item.date} ·{" "}
-                        {isStretchDay(item.dayId)
-                          ? "Stretch"
-                          : item.title.split("·")[0]}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {item.volume > 0
-                          ? `${item.volume} kg · `
-                          : ""}
-                        {item.completedSets}/{item.plannedSets}
-                      </span>
-                    </div>
-                    <Bar value={item.volume} max={maxVolume} />
-                    {item.mood ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        Mood {item.mood}/5
-                        {item.pump ? ` · pump ${item.pump}/5` : ""} ·{" "}
-                        {item.durationMin} min
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground">
-                        {item.durationMin} min · tap for timeline
-                      </p>
-                    )}
-                  </Link>
-                  {reopen ? (
-                    <button
-                      type="button"
-                      onClick={() => void reopenSummary(item)}
-                      className="text-[11px] font-medium text-primary underline"
-                    >
-                      Reopen within 24h
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })
           )}
         </CardContent>
       </Card>
