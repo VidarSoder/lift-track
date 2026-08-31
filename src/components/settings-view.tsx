@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { SessionDaysChart } from "@/components/session-days-chart";
@@ -12,20 +12,45 @@ import { fetchSessionPage } from "@/lib/store";
 import type { SessionSummary } from "@/lib/types";
 import { latestWeight, weightDelta, weightLog } from "@/lib/weight";
 
+function mergeClientSummaries(
+  recent: SessionSummary[],
+  remote: SessionSummary[],
+) {
+  const map = new Map<string, SessionSummary>();
+  for (const item of [...remote, ...recent]) {
+    const dayKey = `${item.date}|${item.dayId}`;
+    const key = item.startedAt ? `${dayKey}|${item.startedAt}` : dayKey;
+    if (item.startedAt) map.delete(dayKey);
+    else if (
+      [...map.keys()].some(
+        (existing) => existing.startsWith(`${dayKey}|`) && existing !== dayKey,
+      )
+    ) {
+      continue;
+    }
+    map.set(key, item);
+  }
+  return [...map.values()];
+}
+
 export function SettingsView() {
   const { athlete } = useTraining();
   const log = weightLog(athlete);
   const current = latestWeight(athlete);
   const delta = weightDelta(athlete);
   const sessionCounts = displaySessionCounts(athlete);
-  const [sessions, setSessions] = useState<SessionSummary[]>(athlete.recent);
+  const [remoteSessions, setRemoteSessions] = useState<SessionSummary[]>([]);
+  const sessions = useMemo(
+    () => mergeClientSummaries(athlete.recent, remoteSessions),
+    [athlete.recent, remoteSessions],
+  );
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const page = await fetchSessionPage({ kind: "all", limit: 200 });
       if (cancelled || !page) return;
-      setSessions(page.items.length > 0 ? page.items : athlete.recent);
+      setRemoteSessions(page.items);
     }
     void load();
     return () => {
